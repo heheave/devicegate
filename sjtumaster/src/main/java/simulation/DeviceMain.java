@@ -2,13 +2,16 @@ package simulation;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import simulation.DeviceValue.BooleanDeviceValue;
-import simulation.DeviceValue.DoubleDeviceValue;
-import simulation.DeviceValue.IntegerDeviceValue;
+import org.apache.log4j.net.SocketServer;
+import simulation.DeviceValue.*;
 import simulation.device.AbstracMonitorDevice;
 import simulation.device.Device;
 import simulation.device.DeviceFactory;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,42 +28,75 @@ public class DeviceMain {
 
     private static class SendRun implements Runnable {
 
-        private final AbstracMonitorDevice device;
+        private final AbstracMonitorDevice<AbstractDeviceValue<?>> device;
 
-        public SendRun(AbstracMonitorDevice device) {
-            this.device = device;
+        private Socket s;
+
+        public SendRun(Device.TYPE type, int portNum) {
+            device = DeviceFactory.getMonitorDevice(type, portNum);
+            this.s = new Socket();
+            try {
+                s.connect(new InetSocketAddress("localhost", 10000));
+            } catch (IOException e) {
+                try {
+                    s.close();
+                    s = null;
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+            }
         }
 
         public void run() {
             try {
-                randomSetValues(device);
+                monitorOnce(device);
                 log.info(device.toJson().toString());
+                sendDataToRemote(device.toJson().toString());
             }catch (Exception e) {
                 e.printStackTrace();
             }
         }
+
+        private void sendDataToRemote(String str) {
+            if (s == null || s.isClosed()) {
+                throw new RuntimeException("Socket error");
+            }
+            try {
+                DataOutputStream dou = new DataOutputStream(s.getOutputStream());
+                byte[] bytes = str.getBytes();
+                dou.writeInt(bytes.length);
+                dou.write(bytes, 0, bytes.length);
+                dou.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+                try {
+                    if (s != null) {
+                        s.close();
+                    }
+                } catch (IOException ioe) {
+                    // ignore
+                }
+            }
+        }
     }
+
     public static void main(String[] args) {
         PropertyConfigurator.configure("src/file/log4j.properties");
         log.info("starting...");
-        AbstracMonitorDevice switchDevice = DeviceFactory.getMonitorDevice(Device.TYPE.SWITCH, 1);
-        AbstracMonitorDevice digitalDevice = DeviceFactory.getMonitorDevice(Device.TYPE.DIGITAL, 2);
-        AbstracMonitorDevice analogDevice = DeviceFactory.getMonitorDevice(Device.TYPE.ANALOG, 4);
         final ScheduledExecutorService es = Executors.newScheduledThreadPool(3);
-        es.scheduleAtFixedRate(new SendRun(switchDevice), 1000, 100, TimeUnit.MILLISECONDS);
-        es.scheduleAtFixedRate(new SendRun(digitalDevice), 1000, 1000, TimeUnit.MILLISECONDS);
-        es.scheduleAtFixedRate(new SendRun(analogDevice), 1000, 1500, TimeUnit.MILLISECONDS);
-        //System.out.println(new File("./").getAbsoluteFile());
+        es.scheduleAtFixedRate(new SendRun(Device.TYPE.SWITCH, 1), 1000, 10000, TimeUnit.MILLISECONDS);
+        es.scheduleAtFixedRate(new SendRun(Device.TYPE.DIGITAL, 2), 1000, 10000, TimeUnit.MILLISECONDS);
+        es.scheduleAtFixedRate(new SendRun(Device.TYPE.ANALOG, 4), 1000, 15000, TimeUnit.MILLISECONDS);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 es.shutdown();
-                System.out.println("shutdown!!!");
+                log.info("shutdown!!!");
             }
         });
 
     }
 
-    private static void  randomSetValues(AbstracMonitorDevice device) {
+    private static void  monitorOnce(AbstracMonitorDevice<AbstractDeviceValue<?>> device) {
         for (int i = 0; i < device.portNum(); i++) {
             if (device.mtype().equals("SWITCH")) {
                 device.setValue(i, new BooleanDeviceValue(ran.nextBoolean()));

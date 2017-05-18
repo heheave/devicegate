@@ -5,12 +5,14 @@ import devicegate.conf.V;
 import devicegate.netty.handler.InDecoderHandler;
 import devicegate.netty.handler.MessageHandler;
 import devicegate.netty.handler.ShowHandler;
-import devicegate.slave.SlaveLaunch;
+import devicegate.launch.SlaveLaunch;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
@@ -39,8 +41,8 @@ public class NettyServer {
         this.bossGroup = new NioEventLoopGroup();
         this.workGroup = new NioEventLoopGroup();
         this.conf = conf;
-        String localHost = conf.getStringOrElse(V.SLAVE_SERVER_HOST, "localhost");
-        int localPort = conf.getIntOrElse(V.SLAVE_SERVER_PORT, 10000);
+        String localHost = conf.getStringOrElse(V.SLAVE_HOST, "127.0.0.1");
+        int localPort = conf.getIntOrElse(V.NETTY_SLAVE_SERVER_PORT, 10000);
         this.bindAddress = new InetSocketAddress(localHost, localPort);
         this.isRunning = false;
     }
@@ -54,10 +56,6 @@ public class NettyServer {
                     .channel(NioServerSocketChannel.class)
                     .option(ChannelOption.SO_BACKLOG, SO_BACKLOG)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                            belongsToLaunch.removeChannel(ctx.channel());
-                        }
 
                         @Override
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
@@ -67,13 +65,13 @@ public class NettyServer {
                         }
                     });
             ChannelFuture future = bootstrap.bind(bindAddress).sync();
-            future.channel().closeFuture().sync();
+            future.channel().closeFuture().addListener(new GenericFutureListener<Future<? super Void>>() {
+                public void operationComplete(Future<? super Void> future) throws Exception {
+                    log.info("Netty server has been shutdown");
+                }
+            });
         } catch (Exception e) {
             log.error("Start netty server error!!!", e);
-        } finally {
-            if (isRunning) {
-                stop();
-            }
         }
     }
 

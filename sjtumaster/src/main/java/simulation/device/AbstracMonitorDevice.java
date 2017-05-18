@@ -76,6 +76,7 @@ abstract public class AbstracMonitorDevice<T extends DeviceValue<?>> implements 
             return false;
         }
         values[idx] = deviceValue;
+        dtimestamp = System.currentTimeMillis();
         return true;
     }
 

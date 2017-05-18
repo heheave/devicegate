@@ -1,51 +1,85 @@
 package devicegate.actor;
 
 import akka.actor.*;
+import akka.pattern.Patterns;
+import akka.util.Timeout;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import devicegate.actor.message.AckMessage;
 import devicegate.conf.Configure;
 import devicegate.conf.V;
+import devicegate.launch.SlaveLaunch;
+import scala.concurrent.Await;
+import scala.concurrent.Future;
+import scala.concurrent.duration.Duration;
 
-import java.io.File;
+import java.net.InetSocketAddress;
 
 /**
  * Created by xiaoke on 17-5-16.
  */
-public class SlaveActor {
+public class SlaveActor extends AbstractAkkaActor{
 
-    private final Configure conf;
+    private ActorSystem system;
 
-    private final ActorSystem system;
+    private ActorRef actorRef;
 
-    private final ActorRef actorRef;
+    private final SlaveLaunch slaveLaunch;
 
-    public SlaveActor(Configure conf) {
-        this.conf = conf;
-        String slaveName = conf.getStringOrElse(V.SLAVE_SYSTEM_NAME, "SLAVESYSTEM");
-        Config config = ConfigFactory.load().getConfig("localConf");
-        system = ActorSystem.apply(slaveName, config);
-        String slavePath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH, "SLAVEPATH");
-        actorRef = system.actorOf(Props.create(SlaveHandler.class), slavePath);
+    private final InetSocketAddress systemAddress;
+
+    public SlaveActor(Configure conf, SlaveLaunch slaveLaunch) {
+        super(conf);
+        this.slaveLaunch = slaveLaunch;
+        this.systemAddress = new InetSocketAddress("127.0.0.1", 10020);
     }
 
-    public void sendToMaster(Object msg) {
-        String remoteActorPath = getRemoteActorPath(conf);
+    public void sendToRemote(Object msg, InetSocketAddress remoteSystemAddr) {
+        String remoteActorPath = getRemoteActorPath(null);
         ActorSelection remoteActor = system.actorSelection(remoteActorPath);
-        System.out.println(remoteActorPath);
         remoteActor.tell(msg, actorRef);
     }
 
-    public static void main(String[] args) {
-        SlaveActor sa = new SlaveActor(new Configure());
-        sa.sendToMaster("hello master");
+    public void sendToMasterWithReply(Object msg)  throws Exception {
+        long contTimeOut = conf.getLongOrElse(V.ACTOR_REPLY_TIMEOUT, 2000);
+        sendToMasterWithReply(msg, contTimeOut);
     }
 
-    public static String getRemoteActorPath(Configure conf) {
-        String remoteHost = conf.getStringOrElse(V.MASTER_SERVER_HOST, "127.0.0.1");
-        int remotePort = conf.getIntOrElse(V.ACTOR_INSTANCE_PORT, 10010);
-        String remoteName = conf.getStringOrElse(V.MASTER_SYSTEM_NAME, "MASTERSYSTEM");
-        String remotePath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH, "MASTERPATH");
-        String remoteActorPath = "akka.tcp://" +remoteName+ "@"+remoteHost+":"+remotePort+"/user/" + remotePath;
-        return remoteActorPath;
+    public void sendToMasterWithReply(Object msg, long timeOut) throws Exception {
+        String slaveActorPath = getRemoteActorPath(null);
+        ActorSelection remoteActor = system.actorSelection(slaveActorPath);
+        Timeout timeout = Timeout.longToTimeout(timeOut);
+        Future<Object> future = Patterns.ask(remoteActor, msg, timeout);
+        Await.result(future, timeout.duration());
+    }
+
+
+
+    public void start() {
+        String slaveName = conf.getStringOrElse(V.ACTOR_SLAVE_SYSTEM_NAME, "SLAVESYSTEM");
+        Config config = ConfigFactory.load().getConfig("localConf");
+        system = ActorSystem.apply(slaveName, config);
+        String slavePath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH, "ACTORPATH");
+        actorRef = system.actorOf(Props.create(SlaveHandler.class, slaveLaunch, systemAddress), slavePath);
+    }
+
+    public void stop() {
+        if (system != null) {
+            if (actorRef != null) {
+                system.stop(actorRef);
+            }
+            if (!system.isTerminated()) {
+                system.shutdown();
+            }
+        }
+    }
+
+    public InetSocketAddress systemAddress() {
+        return systemAddress;
+    }
+
+    public static void main(String[] args) {
+        SlaveActor sa = new SlaveActor(new Configure(), null);
+        sa.start();
     }
 }

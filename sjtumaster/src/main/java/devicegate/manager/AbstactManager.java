@@ -10,18 +10,18 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 abstract public class AbstactManager<T> {
 
-    protected final ConcurrentHashMap<String, T> idToChannel;
+    protected final ConcurrentHashMap<String, T> idToCacheObj;
 
     public AbstactManager() {
-        idToChannel = new ConcurrentHashMap<String, T>();
+        idToCacheObj = new ConcurrentHashMap<String, T>();
     }
 
     public T putIfAbsent(String id, T newValue) {
-        return idToChannel.putIfAbsent(id, newValue);
+        return idToCacheObj.putIfAbsent(id, newValue);
     }
 
     public T put(String id, T newValue) {
-        T oldValue = idToChannel.put(id, newValue);
+        T oldValue = idToCacheObj.put(id, newValue);
         if (oldValue != null) {
             afterRemoved(oldValue);
         }
@@ -29,11 +29,11 @@ abstract public class AbstactManager<T> {
     }
 
     public T get(String id) {
-        return idToChannel.get(id);
+        return idToCacheObj.get(id);
     }
 
     public T remove(String id) {
-        T oldValue = idToChannel.remove(id);
+        T oldValue = idToCacheObj.remove(id);
         if (oldValue != null) {
             afterRemoved(oldValue);
         }
@@ -41,16 +41,16 @@ abstract public class AbstactManager<T> {
     }
 
     public boolean containsKey(String id) {
-        return idToChannel.containsKey(id);
+        return idToCacheObj.containsKey(id);
     }
 
     public boolean isEmpty() {
-        return idToChannel.isEmpty();
+        return idToCacheObj.isEmpty();
     }
 
     public void clear() {
-        Collection<T> oldValues = idToChannel.values();
-        idToChannel.clear();
+        Collection<T> oldValues = idToCacheObj.values();
+        idToCacheObj.clear();
         for (T oldValue : oldValues) {
             afterRemoved(oldValue);
         }

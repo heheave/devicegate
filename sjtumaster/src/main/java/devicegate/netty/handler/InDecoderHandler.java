@@ -3,6 +3,8 @@ package devicegate.netty.handler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import net.sf.json.JSON;
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import java.util.List;
@@ -36,18 +38,9 @@ public class InDecoderHandler extends ByteToMessageDecoder {
         if (curidx == limit) {
             byte[] values = buf;
             buf = null;
-            Object msg = null;
-            try {
-                msg = JSONObject.fromObject(values);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            Object msg = JSONObject.fromObject(new String(values));
             list.add(msg);
         }
     }
 
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
-    }
 }

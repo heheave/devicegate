@@ -12,10 +12,4 @@ public class ShowHandler extends ChannelInboundHandlerAdapter {
         System.out.println("receive message: " + msg);
         ctx.fireChannelRead(msg);
     }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
-        ctx.close();
-    }
 }

@@ -21,7 +21,7 @@ public class Configure {
     
     private void readFromXml() throws DocumentException {
         File f = new File(V_XML_PATH);
-        System.out.println(f.getAbsoluteFile());
+        //System.out.println(f.getAbsoluteFile());
         SAXReader reader = new SAXReader();
         Document doc = reader.read(f);
         Element root = doc.getRootElement();
@@ -77,6 +77,24 @@ public class Configure {
         if (e != null) {
             return e;
         } else {
+            return defualt;
+        }
+    }
+
+    public boolean getBoolean(String key) {
+        return Boolean.parseBoolean(XML_VAR_MAP.get(key));
+    }
+
+    public boolean getBooleanOrElse(String key, boolean defualt) {
+        try {
+            String e = mapGet(key);
+            if (e != null) {
+                return Boolean.parseBoolean(e.toString());
+            } else {
+                return defualt;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
             return defualt;
         }
     }
