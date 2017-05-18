@@ -28,18 +28,19 @@ public class DeviceManager extends AbstactManager<DeviceCacheInfo>{
     }
 
     public void cleanAll(SlaveLaunch slaveLaunch, long time) {
-        synchronized (idToCacheObj) {
-            List<String> toRemoveKey = new LinkedList<String>();
-            for (Map.Entry<String, DeviceCacheInfo> entry: idToCacheObj.entrySet()) {
-                if (entry.getValue().isExpired(time)) {
-                    toRemoveKey.add(entry.getKey());
-                }
-            }
-
-            for (String key: toRemoveKey) {
-                slaveLaunch.removeChannel(key);
+        // ConcurrentHashMap doesn't neet synchronized
+        // however entry.value may be null under concurrency condition
+        List<String> toRemoveKey = new LinkedList<String>();
+        for (Map.Entry<String, DeviceCacheInfo> entry: idToCacheObj.entrySet()) {
+            if (entry.getValue() != null && entry.getValue().isExpired(time)) {
+                toRemoveKey.add(entry.getKey());
             }
         }
+
+        for (String key: toRemoveKey) {
+            slaveLaunch.removeChannel(key);
+        }
+        toRemoveKey.clear();
     }
 
     public static DeviceManager getInstance() {

@@ -84,6 +84,7 @@ public class MachineManager extends AbstactManager<InetSocketAddress>{
     }
 
     public void cleanOldAddress(long timeVersion) {
+        // HashMap need synchronized
         synchronized (addrs) {
             List<InetSocketAddress> toRemoveKeys = new LinkedList<InetSocketAddress>();
             for (Map.Entry<InetSocketAddress, TimeVersion> entry: addrs.entrySet()) {
@@ -100,26 +101,29 @@ public class MachineManager extends AbstactManager<InetSocketAddress>{
 
     }
 
-    private void removeAll(InetSocketAddress inetAddr) {
-        synchronized (idToCacheObj) {
-            List<String> toRemoveKeys = new LinkedList<String>();
-            for (Map.Entry<String, InetSocketAddress> entry : idToCacheObj.entrySet()) {
-                if (inetAddr.equals(entry.getValue())) {
-                    toRemoveKeys.add(entry.getKey());
-                }
+    public void pingAllAddress(MasterActor ma) {
+        // HashMap need synchronized
+        synchronized (addrs) {
+            for (InetSocketAddress isa : addrs.keySet()) {
+                Msg hbMsg = MessageFactory.getMessage(Msg.TYPE.HB);
+                ma.sendToRemote(hbMsg, isa);
             }
-            for (String id: toRemoveKeys) {
-                remove(id);
-            }
-            toRemoveKeys.clear();
         }
     }
 
-    public void pingAllAddress(MasterActor ma) {
-        for (InetSocketAddress isa: addrs.keySet()) {
-            Msg hbMsg = MessageFactory.getMessage(Msg.TYPE.HB);
-            ma.sendToRemote(hbMsg, isa);
+    private void removeAll(InetSocketAddress inetAddr) {
+        // ConcurrentHashMap doesn't neet synchronized
+        // however entry.value may be null under concurrency condition
+        List<String> toRemoveKeys = new LinkedList<String>();
+        for (Map.Entry<String, InetSocketAddress> entry : idToCacheObj.entrySet()) {
+            if (inetAddr.equals(entry.getValue())) {
+                toRemoveKeys.add(entry.getKey());
+            }
         }
+        for (String id: toRemoveKeys) {
+            remove(id);
+        }
+        toRemoveKeys.clear();
     }
 
     @Override

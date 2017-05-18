@@ -18,24 +18,31 @@ public class Configure {
     private static final String V_XML_PATH = V.VAR_FILE_PATH;
 
     private Map<String, String> XML_VAR_MAP = null;
-    
-    private void readFromXml() throws DocumentException {
-        File f = new File(V_XML_PATH);
-        //System.out.println(f.getAbsoluteFile());
-        SAXReader reader = new SAXReader();
-        Document doc = reader.read(f);
-        Element root = doc.getRootElement();
-        List<?> vs = root.elements("v");
-        for (Object obj : vs) {
-            if (obj instanceof Element) {
-                Element ve = (Element) obj;
-                String name = ve.attributeValue("name");
-                Object value = ve.getData();
-                if (name != null) {
-                    XML_VAR_MAP.put(name.trim(), value.toString().trim());
+
+    public void readFromXml(String filePath) throws DocumentException {
+        check();
+        synchronized (this) {
+            XML_VAR_MAP.clear();
+            File f = new File(filePath);
+            SAXReader reader = new SAXReader();
+            Document doc = reader.read(f);
+            Element root = doc.getRootElement();
+            List<?> vs = root.elements("v");
+            for (Object obj : vs) {
+                if (obj instanceof Element) {
+                    Element ve = (Element) obj;
+                    String name = ve.attributeValue("name");
+                    Object value = ve.getData();
+                    if (name != null) {
+                        XML_VAR_MAP.put(name.trim(), value.toString().trim());
+                    }
                 }
             }
         }
+    }
+
+    public void readFromDefaultXml() throws DocumentException {
+        readFromXml(V_XML_PATH);
     }
 
     private void check() {
@@ -43,15 +50,6 @@ public class Configure {
             synchronized (this) {
                 if (XML_VAR_MAP == null) {
                     XML_VAR_MAP = new HashMap<String, String>();
-                    try {
-                        readFromXml();
-                    } catch (DocumentException e) {
-                        e.printStackTrace();
-                        if (XML_VAR_MAP != null) {
-                            XML_VAR_MAP.clear();
-                        }
-                        throw new RuntimeException(e);
-                    }
                 }
             }
         }
@@ -72,7 +70,6 @@ public class Configure {
     }
 
     public String getStringOrElse(String key, String defualt) {
-        check();
         String e = mapGet(key);
         if (e != null) {
             return e;
