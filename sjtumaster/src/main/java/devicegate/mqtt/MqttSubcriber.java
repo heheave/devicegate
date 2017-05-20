@@ -40,7 +40,8 @@ public class MqttSubcriber {
         //this.defaultOpt.setUserName();
         //this.defaultOpt.setPassword();
         this.mqttHandler = new MqttSubcriberHandler(slaveLaunch);
-        String brokerAddress = conf.getStringOrElse(V.SLAVE_HOST, "114.55.92.31");
+        String brokerAddress = "114.55.92.31";
+        //String brokerAddress = conf.getStringOrElse(V.SLAVE_HOST, "114.55.92.31");
         subAddress = new InetSocketAddress(brokerAddress, 1883);
 
     }

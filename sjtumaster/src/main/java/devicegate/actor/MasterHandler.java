@@ -2,10 +2,12 @@ package devicegate.actor;
 
 import akka.actor.UntypedActor;
 import devicegate.actor.message.*;
+import devicegate.launch.MasterLaunch;
 import devicegate.manager.MachineManager;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 /**
  * Created by xiaoke on 17-5-16.
@@ -13,6 +15,12 @@ import java.net.InetSocketAddress;
 public class MasterHandler extends UntypedActor {
 
     private static final Logger log = Logger.getLogger(MasterHandler.class);
+
+    private final MasterActor masterActor;
+
+    public MasterHandler(MasterActor masterActor) {
+        this.masterActor = masterActor;
+    }
 
     @Override
     public void onReceive(Object message) throws Exception {
@@ -34,7 +42,14 @@ public class MasterHandler extends UntypedActor {
             rmId(rmIdMessage);
         } else if (message instanceof HBMessage) {
             HBMessage hbMessage = (HBMessage)message;
-            hb(hbMessage);
+            getSender().tell(MessageFactory.getMessage(Msg.TYPE.ACK), getSelf());
+            InetSocketAddress shouldTellMeAddr = hb(hbMessage);
+            if (shouldTellMeAddr != null) {
+                masterActor.sendToRemote(MessageFactory.getMessage(Msg.TYPE.TELLME), shouldTellMeAddr);
+            }
+        } else if(message instanceof TellMeMessage) {
+            TellMeMessage tellMeMessage = (TellMeMessage)message;
+            tellMe(tellMeMessage);
         } else {
             log.info("Received message: " + message);
         }
@@ -72,10 +87,25 @@ public class MasterHandler extends UntypedActor {
         }
     }
 
-    private void hb(HBMessage hbMessage) {
+    private InetSocketAddress hb(HBMessage hbMessage) {
         InetSocketAddress isa = hbMessage.getAddress();
         if (isa != null) {
-            MachineManager.getInstance().updateAddress(isa);
+            if (!MachineManager.getInstance().updateAddress(isa)) {
+                return isa;
+            }
+        }
+        return null;
+    }
+
+    private void tellMe(TellMeMessage tellMeMessage) {
+        InetSocketAddress isa = tellMeMessage.getAddress();
+        if (isa != null) {
+            List<String> ids = tellMeMessage.getIds();
+            if (ids != null) {
+                for (String id : ids) {
+                    MachineManager.getInstance().update(id, isa);
+                }
+            }
         }
     }
 }

@@ -41,7 +41,7 @@ public class Configure {
         }
     }
 
-    public void readFromDefaultXml() throws DocumentException {
+    public void readFromXml() throws DocumentException {
         readFromXml(V_XML_PATH);
     }
 
@@ -61,12 +61,7 @@ public class Configure {
     }
     
     public String getString(String key) {
-        String e = mapGet(key);
-        if (e != null) {
-            return e;
-        } else {
-            return "NULL";
-        }
+        return mapGet(key);
     }
 
     public String getStringOrElse(String key, String defualt) {

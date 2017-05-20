@@ -5,20 +5,21 @@ package devicegate.conf;
  */
 public class V {
     // used for para info
+    public static final String LOG_PATH = "src/file/log4j.properties" ;
     public static final String VAR_FILE_PATH = "src/file/var.xml";
-    public static final String LAUNCH_MODE = "mode";
-    public static final String LOG_PATH = "sjtumaster.log.path" ;
+    public static final String NETTY_CHANNEL_ATTR_KEY = "CHANNEL_ID_ATTACHMENT";
 
     // used for base
     public static final String MASTER_HOST = "sjtumaster.master.host";
     public static final String SLAVE_HOST= "sjtumaster.slave.host";
+    public static final String MASTER_ADDR_SNAPSHOT = "sjtumaster.master.addr.snapshot";
     public static final String MASTER_SCHELDULE_DELAY = "sjtumaster.master.schedule.delay";
     public static final String MASTER_SCHELDULE_PERIOD = "sjtumaster.master.schedule.period";
 
     // used for netty
     public static final String NETTY_SERVER_SO_BACKLOG = "sjtumaster.netty.server.sobacklog";
     public static final String NETTY_SLAVE_SERVER_PORT= "sjtumaster.netty.slave.port";
-    public static final String NETTY_CHANNEL_ATTR_KEY = "sjtumaster.netty.channel.attr.key";
+    //public static final String NETTY_CHANNEL_ATTR_KEY = "sjtumaster.netty.channel.attr.key";
 
     // used for actor
     public static final String ACTOR_MASTER_SYSTEM_NAME = "sjtumaster.master.system.name";
@@ -27,6 +28,7 @@ public class V {
 
     public static final String ACTOR_MASTER_PORT = "sjtumaster.actor.master.port";
     public static final String ACTOR_SLAVE_PORT = "sjtumaster.actor.master.port";
+    public static final String ACTOR_TELLME_MAX_IDS = "sjtumaster.actor.tellme.max.ids";
     public static final String ACTOR_REPLY_TIMEOUT = "sjtumaster.actor.reply.timeout";
 
     public static final String ACTOR_CONF_FILE_PATH = "sjtumaster.actor.conf.file";

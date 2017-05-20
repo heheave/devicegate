@@ -3,6 +3,7 @@ package devicegate.launch;
 import devicegate.actor.SlaveActor;
 import devicegate.actor.message.MessageFactory;
 import devicegate.actor.message.Msg;
+import devicegate.actor.message.TellMeMessage;
 import devicegate.conf.Configure;
 import devicegate.conf.V;
 import devicegate.kafka.KafkaSender;
@@ -17,6 +18,9 @@ import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -61,6 +65,7 @@ public class SlaveLaunch implements Launch{
             msg.setAddress(slaveActor.systemAddress());
             //slaveActor.sendToMaster(msg);
             slaveActor.sendToMasterWithReply(msg);
+            startHeartbeatThread();
         } else {
             throw new RuntimeException("Failed to launch in state: " + state.get());
         }
@@ -87,6 +92,7 @@ public class SlaveLaunch implements Launch{
                     slaveActor.sendToMasterWithReply(msg);
                 } catch (Exception e) {
                     e.printStackTrace();
+                    log.info("Retry to sendToMasterWithReply error", e);
                 }
             }
         } else {
@@ -101,7 +107,8 @@ public class SlaveLaunch implements Launch{
     public boolean addChannel(String id, Channel channel) {
         // added to local manager
         DeviceCacheInfo di = new DeviceCacheInfo(channel, conf.getLongOrElse(V.MASTER_SCHELDULE_PERIOD, 5000));
-        if (cm.putIfAbsent(id, di) == null) {
+        DeviceCacheInfo oldDi = cm.putIfAbsent(id, di);
+        if (oldDi == null) {
             // added to remote manager
             Msg msg = MessageFactory.getMessage(Msg.TYPE.ADDID);
             msg.setId(id);
@@ -116,6 +123,7 @@ public class SlaveLaunch implements Launch{
             }
             return true;
         } else {
+            oldDi.updateTime();
             return true;
         }
     }
@@ -158,9 +166,6 @@ public class SlaveLaunch implements Launch{
         }
     }
 
-    public InetSocketAddress getActorSystemAddress() {
-        return slaveActor.systemAddress();
-    }
 
     public void pushToKafka(JSONObject jo) {
         if (!kafkaSender.msgIn(jo)) {
@@ -168,8 +173,71 @@ public class SlaveLaunch implements Launch{
         }
     }
 
-    public void cleanAll() {
-        cm.cleanAll(this, System.currentTimeMillis());
+    public void tellToMaster() {
+        int maxIds = conf.getIntOrElse(V.ACTOR_TELLME_MAX_IDS, 50);
+        List<String> keys = cm.getAllKeys();
+        if (keys.isEmpty()) return;
+        int keySize = keys.size();
+        int resListNum = keySize % maxIds == 0 ? keySize / maxIds : keySize / maxIds + 1;
+        List<List<String>> res = new ArrayList<List<String>>(resListNum);
+        int full = keySize / resListNum + 1;
+        int cnt = 1;
+        List<String> tmp = new ArrayList<String>(full);
+        for (String key: keys) {
+            if (cnt == full) {
+                res.add(tmp);
+                tmp = new ArrayList<String>(full);
+            } else {
+                tmp.add(key);
+            }
+            cnt++;
+        }
+        if (!tmp.isEmpty()){
+            res.add(tmp);
+        }
+        for (List<String> li : res) {
+            Msg mes = MessageFactory.getMessage(Msg.TYPE.TELLME);
+            mes.setAddress(slaveActor.systemAddress());
+            ((TellMeMessage)mes).setIds(li);
+            slaveActor.sendToRemote(mes, null);
+            li.clear();
+        }
+        res.clear();
+    }
+
+    public void startHeartbeatThread() {
+        final long masterPeriod = conf.getLongOrElse(V.MASTER_SCHELDULE_PERIOD, 10000);
+        Runnable run = new Runnable() {
+            public void run() {
+                long lastCleanTime = System.currentTimeMillis();
+                while (state() == 1) {
+                    long currentTime = System.currentTimeMillis();
+                    if (lastCleanTime + masterPeriod < currentTime) {
+                        lastCleanTime = currentTime;
+                        cm.cleanAll(SlaveLaunch.this, currentTime);
+                    }
+                    Msg hbMsg = MessageFactory.getMessage(Msg.TYPE.HB);
+                    hbMsg.setAddress(slaveActor.systemAddress());
+                    long sleepTime = masterPeriod;
+                    long timeout = conf.getLongOrElse(V.ACTOR_REPLY_TIMEOUT, 2000);
+                    try {
+                        slaveActor.sendToMasterWithReply(hbMsg, timeout);
+                    } catch (Exception e) {
+                        log.info("HeartBeat failed, decrease the time interval");
+                        sleepTime >>= 1;
+                    }
+                    if (sleepTime < timeout) sleepTime = timeout;
+                    try {
+                        Thread.sleep(sleepTime);
+                    } catch (InterruptedException e) {
+                        log.info("Slave heartbeat loop sleep error", e);
+                    }
+                }
+            }
+        };
+        Thread t = new Thread(run);
+        t.setDaemon(true);
+        t.start();
     }
 
 }

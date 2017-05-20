@@ -4,10 +4,13 @@ import akka.actor.UntypedActor;
 import devicegate.actor.message.HBMessage;
 import devicegate.actor.message.MessageFactory;
 import devicegate.actor.message.Msg;
+import devicegate.actor.message.TellMeMessage;
 import devicegate.launch.SlaveLaunch;
+import org.apache.commons.collections.Factory;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 /**
  * Created by xiaoke on 17-5-16.
@@ -27,12 +30,9 @@ public class SlaveHandler extends UntypedActor {
 
     @Override
     public void onReceive(Object message) throws Exception {
-        System.out.println("Received Message: " + message.getClass().getName());
-        if (message instanceof HBMessage) {
-            Msg mes = MessageFactory.getMessage(Msg.TYPE.HB);
-            mes.setAddress(systemAddress);
-            getSender().tell(mes, getSelf());
-            slaveLaunch.cleanAll();
+        log.info("Received Message: " + ((Msg)message).type());
+        if (message instanceof TellMeMessage) {
+            slaveLaunch.tellToMaster();
         } else {
             log.info("Received Message: " + message);
         }

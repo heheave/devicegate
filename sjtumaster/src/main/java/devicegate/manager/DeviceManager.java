@@ -1,14 +1,14 @@
 package devicegate.manager;
 
 
+import devicegate.conf.V;
 import devicegate.launch.SlaveLaunch;
 import io.netty.channel.Channel;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 import org.apache.log4j.Logger;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by xiaoke on 17-5-16.
@@ -23,8 +23,20 @@ public class DeviceManager extends AbstactManager<DeviceCacheInfo>{
     void afterRemoved(DeviceCacheInfo oldValue) {
         if (oldValue != null && oldValue.getChannel() != null) {
             Channel channel =  oldValue.getChannel();
+            Attribute<String> attr = channel.attr(AttributeKey.<String>valueOf(V.NETTY_CHANNEL_ATTR_KEY));
+            if (attr != null) {
+                attr.setIfAbsent(null);
+            }
             channel.close();
         }
+    }
+
+    public List<String> getAllKeys() {
+        List<String> keysCopy = new LinkedList<String>();
+        for (String str: idToCacheObj.keySet()) {
+            keysCopy.add(new String(str));
+        }
+        return keysCopy;
     }
 
     public void cleanAll(SlaveLaunch slaveLaunch, long time) {

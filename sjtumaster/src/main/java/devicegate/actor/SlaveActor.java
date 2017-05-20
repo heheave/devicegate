@@ -13,6 +13,7 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 
 /**
@@ -31,7 +32,8 @@ public class SlaveActor extends AbstractAkkaActor{
     public SlaveActor(Configure conf, SlaveLaunch slaveLaunch) {
         super(conf);
         this.slaveLaunch = slaveLaunch;
-        this.systemAddress = new InetSocketAddress("127.0.0.1", 10020);
+        String systemHost = conf.getString(V.SLAVE_HOST);
+        this.systemAddress = new InetSocketAddress(systemHost, 10020);
     }
 
     public void sendToRemote(Object msg, InetSocketAddress remoteSystemAddr) {
@@ -57,7 +59,8 @@ public class SlaveActor extends AbstractAkkaActor{
 
     public void start() {
         String slaveName = conf.getStringOrElse(V.ACTOR_SLAVE_SYSTEM_NAME, "SLAVESYSTEM");
-        Config config = ConfigFactory.load().getConfig("localConf");
+        //Config config = ConfigFactory.load().getConfig("localConf");
+        Config config = ConfigFactory.parseFile(new File("src/file/application.conf")).getConfig("slaveConf");
         system = ActorSystem.apply(slaveName, config);
         String slavePath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH, "ACTORPATH");
         actorRef = system.actorOf(Props.create(SlaveHandler.class, slaveLaunch, systemAddress), slavePath);

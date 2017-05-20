@@ -22,7 +22,7 @@ abstract public class AbstractAkkaActor {
         String remoteHost;
         int remotePort;
         if (remoteSystemAddr == null) {
-            remoteHost = conf.getStringOrElse(V.MASTER_HOST, "127.0.0.1");
+            remoteHost = conf.getString(V.MASTER_HOST);
             remotePort = masterPort;
         } else {
             remoteHost = remoteSystemAddr.getAddress().getHostAddress();
@@ -33,7 +33,6 @@ abstract public class AbstractAkkaActor {
             remoteName = conf.getStringOrElse(V.ACTOR_MASTER_SYSTEM_NAME, "MASTERSYSTEM");
         } else {
             remoteName = conf.getStringOrElse(V.ACTOR_SLAVE_SYSTEM_NAME, "SLAVESYSTEM");
-
         }
         String remotePath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH, "ACTORPATH");
         String remoteActorPath = "akka.tcp://" + remoteName + "@" + remoteHost + ":" + remotePort + "/user/" + remotePath;

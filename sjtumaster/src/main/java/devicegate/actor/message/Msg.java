@@ -13,7 +13,7 @@ import java.util.Map;
 public abstract class Msg implements Serializable{
 
     public enum TYPE {
-        HB, ACK, ADDID, RMID, STASLV, STPSLV
+        HB, ACK, TELLME, ADDID, RMID, STASLV, STPSLV
     }
 
     protected final TYPE type;

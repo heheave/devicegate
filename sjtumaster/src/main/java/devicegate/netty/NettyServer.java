@@ -41,7 +41,7 @@ public class NettyServer {
         this.bossGroup = new NioEventLoopGroup();
         this.workGroup = new NioEventLoopGroup();
         this.conf = conf;
-        String localHost = conf.getStringOrElse(V.SLAVE_HOST, "127.0.0.1");
+        String localHost = conf.getString(V.SLAVE_HOST);
         int localPort = conf.getIntOrElse(V.NETTY_SLAVE_SERVER_PORT, 10000);
         this.bindAddress = new InetSocketAddress(localHost, localPort);
         this.isRunning = false;

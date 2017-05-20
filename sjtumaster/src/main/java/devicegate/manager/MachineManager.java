@@ -5,6 +5,7 @@ import devicegate.actor.message.MessageFactory;
 import devicegate.actor.message.Msg;
 import org.apache.log4j.Logger;
 
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.util.*;
 
@@ -16,7 +17,7 @@ public class MachineManager extends AbstactManager<InetSocketAddress>{
 
     private static class TimeVersion {
 
-        private long timeVersion;
+        long timeVersion;
 
         public TimeVersion() {
             this(System.currentTimeMillis());
@@ -36,6 +37,7 @@ public class MachineManager extends AbstactManager<InetSocketAddress>{
              }
         }
     }
+
     private static final Logger log = Logger.getLogger(DeviceManager.class);
 
     private static MachineManager mm = null;
@@ -58,13 +60,75 @@ public class MachineManager extends AbstactManager<InetSocketAddress>{
         return mm;
     }
 
-    public void updateAddress(InetSocketAddress addr) {
+//    public void loadFrom(MasterActor ma, String path) {
+//        File file = new File(path);
+//        if (!file.exists()) {
+//            return;
+//        }
+//        BufferedReader br = null;
+//        try {
+//            br = new BufferedReader(new FileReader(file));
+//            String line = null;
+//            while ((line = br.readLine()) != null) {
+//                try {
+//                    String[] infos = line.split(":", 2);
+//                    InetSocketAddress tmpAddr = new InetSocketAddress(infos[0], Integer.parseInt(infos[1]));
+//                    ma.sendToRemote(MessageFactory.getMessage(Msg.TYPE.HB), tmpAddr);
+//                }catch (Exception e) {
+//                    e.fillInStackTrace();
+//                }
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        } finally {
+//            if (br != null) {
+//                try {
+//                    br.close();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        }
+//    }
+//
+//    public void storeTo(String path) {
+//        File file = new File(path);
+//        PrintWriter pw = null;
+//        try {
+//            if (!file.exists()) {
+//                file.getParentFile().mkdirs();
+//                file.createNewFile();
+//            }
+//            if (file.isFile()) {
+//                pw = new PrintWriter(file);
+//                synchronized (addrs) {
+//                    for (Map.Entry<InetSocketAddress, TimeVersion> entry: addrs.entrySet()) {
+//                        InetSocketAddress key = entry.getKey();
+//                        String storeStr = key.getAddress().getHostAddress()
+//                                + ":" +key.getPort();
+//                        pw.println(storeStr);
+//                    }
+//                    pw.flush();
+//                }
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        } finally {
+//            if (pw != null) {
+//                pw.close();
+//            }
+//        }
+//    }
+
+    public boolean updateAddress(InetSocketAddress addr) {
         synchronized (addrs) {
             TimeVersion tv = addrs.get(addr);
             if (tv != null) {
                 tv.update();
+                return true;
             } else {
                 addrs.put(addr, new TimeVersion());
+                return false;
             }
         }
     }
@@ -101,12 +165,17 @@ public class MachineManager extends AbstactManager<InetSocketAddress>{
 
     }
 
-    public void pingAllAddress(MasterActor ma) {
+    public void showAllAddress() {
         // HashMap need synchronized
         synchronized (addrs) {
             for (InetSocketAddress isa : addrs.keySet()) {
-                Msg hbMsg = MessageFactory.getMessage(Msg.TYPE.HB);
-                ma.sendToRemote(hbMsg, isa);
+                log.info("\t\tMachine (" + isa.getAddress().getHostAddress() +":" + isa.getPort()+ "): " + addrs.get(isa).timeVersion);
+            }
+        }
+
+        for (Map.Entry<String, InetSocketAddress> entry : idToCacheObj.entrySet()) {
+            if (entry.getValue() != null) {
+                log.info("\t\tDevice (" + entry.getKey() + ") is on machine: " + entry.getValue().getAddress().getHostAddress() + ":" + entry.getValue().getPort());
             }
         }
     }

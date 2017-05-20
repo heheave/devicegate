@@ -36,7 +36,8 @@ public class DeviceMain {
             device = DeviceFactory.getMonitorDevice(type, portNum);
             this.s = new Socket();
             try {
-                s.connect(new InetSocketAddress("localhost", 10000));
+                s.connect(new InetSocketAddress("192.168.1.110", 10000));
+                s.setKeepAlive(true);
             } catch (IOException e) {
                 try {
                     s.close();
@@ -58,9 +59,9 @@ public class DeviceMain {
         }
 
         private void sendDataToRemote(String str) {
-            if (s == null || s.isClosed()) {
-                throw new RuntimeException("Socket error");
-            }
+//            if (s == null || s.isClosed()) {
+//                throw new RuntimeException("Socket error");
+//            }
             try {
                 DataOutputStream dou = new DataOutputStream(s.getOutputStream());
                 byte[] bytes = str.getBytes();
@@ -84,9 +85,9 @@ public class DeviceMain {
         PropertyConfigurator.configure("src/file/log4j.properties");
         log.info("starting...");
         final ScheduledExecutorService es = Executors.newScheduledThreadPool(3);
-        es.scheduleAtFixedRate(new SendRun(Device.TYPE.SWITCH, 1), 1000, 10000, TimeUnit.MILLISECONDS);
-        es.scheduleAtFixedRate(new SendRun(Device.TYPE.DIGITAL, 2), 1000, 10000, TimeUnit.MILLISECONDS);
-        es.scheduleAtFixedRate(new SendRun(Device.TYPE.ANALOG, 4), 1000, 15000, TimeUnit.MILLISECONDS);
+        es.scheduleAtFixedRate(new SendRun(Device.TYPE.SWITCH, 1), 1000, 5000, TimeUnit.MILLISECONDS);
+        es.scheduleAtFixedRate(new SendRun(Device.TYPE.DIGITAL, 2), 1000, 5000, TimeUnit.MILLISECONDS);
+        es.scheduleAtFixedRate(new SendRun(Device.TYPE.ANALOG, 4), 1000, 5000, TimeUnit.MILLISECONDS);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 es.shutdown();

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <variable>
-    <v name="sdmc.log.path">src/file/log4j.properties</v>
-    <v name="sdmc.netty.server.sobacklog">50</v>
-    <v name="sdmc.netty.server.port">9999</v>
-    <v name="sdmc.actor.maxbox.compacity">100</v>
+    <v name="sjtumaster.master.host">192.168.1.110</v>
+    <v name="sjtumaster.slave.host">192.168.1.110</v>
+    <v name="sjtumaster.kafka.push.topic">devicegate-topic</v>
+    <v name="sjtumater.kafka.broker.list">192.168.1.111:9092,192.168.1.112:9092,192.168.1.113:9092</v>
+    <v name="sjtumaster.mqtt.sub.topic">PLATFORM_MQTT_ACCESS_TOPIC</v>
 </variable>

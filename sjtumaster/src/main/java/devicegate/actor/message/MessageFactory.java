@@ -26,6 +26,9 @@ public class MessageFactory {
             case HB:
                 ret = new HBMessage();
                 break;
+            case TELLME:
+                ret = new TellMeMessage();
+                break;
             default:
         }
         return ret;

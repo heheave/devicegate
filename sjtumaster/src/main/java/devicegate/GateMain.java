@@ -1,13 +1,16 @@
 package devicegate;
 
 import devicegate.conf.Configure;
+import devicegate.conf.V;
 import devicegate.launch.Launch;
 import devicegate.launch.MasterLaunch;
 import devicegate.launch.SlaveLaunch;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
+import org.dom4j.DocumentException;
 
 import java.awt.*;
+import java.io.File;
 
 /**
  * Created by xiaoke on 17-5-16.
@@ -19,12 +22,18 @@ public class GateMain {
     private static Launch launch;
 
     public static void main(String[] args) {
-        PropertyConfigurator.configure("src/file/log4j.properties");
+        PropertyConfigurator.configure(V.LOG_PATH);
         if (args.length != 1) {
             log.error("Should specify the launch mode: master/slave");
             System.exit(-1);
         } else {
             Configure conf = new Configure();
+            try {
+                conf.readFromXml();
+            } catch (DocumentException e) {
+                log.error("Could not find var.xml", e);
+                System.exit(-1);
+            }
             if ("master".compareToIgnoreCase(args[0]) == 0) {
                 log.info("Launcher mode is master");
                 launch = new MasterLaunch(conf);

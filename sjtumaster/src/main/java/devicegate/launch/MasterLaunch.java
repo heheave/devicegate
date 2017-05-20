@@ -26,7 +26,9 @@ public class MasterLaunch implements Launch{
 
     private final ScheduledThreadPoolExecutor es;
 
-    private volatile boolean needPing;
+    //private volatile boolean needPing;
+
+    //private final String addrSnapshotPath;
 
     public MasterLaunch(Configure conf) {
         this.conf = conf;
@@ -34,12 +36,14 @@ public class MasterLaunch implements Launch{
         this.mm = MachineManager.getInstance();
         this.state = new AtomicInteger();
         this.es = new ScheduledThreadPoolExecutor(1);
-        this.needPing = false;
+        //this.needPing = false;
+        //this.addrSnapshotPath = conf.getStringOrElse(V.MASTER_ADDR_SNAPSHOT, "snapshot/addr.spt");
     }
 
     public void launch() throws Exception{
         if (state.compareAndSet(0, 1)) {
             masterActor.start();
+            //mm.loadFrom(masterActor, addrSnapshotPath);
             startShedualTask();
         } else {
             throw new RuntimeException("Failed to launch in state: " + state.get());
@@ -50,6 +54,7 @@ public class MasterLaunch implements Launch{
         if (state.compareAndSet(1, 2)) {
             es.shutdown();
             masterActor.stop();
+            //mm.storeTo(addrSnapshotPath);
         } else {
             throw new RuntimeException("Failed to shutdown in state: " + state.get());
         }
@@ -61,25 +66,12 @@ public class MasterLaunch implements Launch{
 
     private void startShedualTask() {
         long delay = conf.getLongOrElse(V.MASTER_SCHELDULE_DELAY, 1000);
-        final long period = conf.getLongOrElse(V.MASTER_SCHELDULE_PERIOD, 3000);
+        final long period = conf.getLongOrElse(V.MASTER_SCHELDULE_PERIOD, 10000);
         es.scheduleAtFixedRate(new Runnable() {
             public void run() {
-                if (needPing) {
-                    pingAll();
-                    needPing = false;
-                } else {
-                    mmClear(period);
-                    needPing = true;
-                }
+                mm.cleanOldAddress(System.currentTimeMillis() - (period << 1));
+                mm.showAllAddress();
             }
         }, delay, period, TimeUnit.MILLISECONDS);
-    }
-
-    private void mmClear(long period) {
-        mm.cleanOldAddress(System.currentTimeMillis() - period);
-    }
-
-    private void pingAll() {
-        mm.pingAllAddress(masterActor);
     }
 }

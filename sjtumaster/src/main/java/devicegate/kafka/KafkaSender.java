@@ -8,10 +8,7 @@ import org.apache.log4j.Logger;
 
 import java.io.Serializable;
 import java.util.Properties;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 /**
  * Created by xiaoke on 17-5-17.
@@ -44,7 +41,7 @@ public class KafkaSender {
                     Serializable msg = msgQueue.take();
                     if (msg != null) {
                         ProducerRecord<String, String> record = new ProducerRecord<String, String>(topic, msg.toString());
-                        producer.send(record, new Callback() {
+                        Future<RecordMetadata> future = producer.send(record, new Callback() {
                             public void onCompletion(RecordMetadata recordMetadata, Exception e) {
                                 log.info("Msg send: offset=" + recordMetadata.offset() + ", partition=" + recordMetadata.partition());
                             }
