@@ -9,7 +9,7 @@ import devicegate.conf.V;
 import devicegate.kafka.KafkaSender;
 import devicegate.manager.DeviceCacheInfo;
 import devicegate.manager.DeviceManager;
-import devicegate.mqtt.MqttSubcriber;
+import devicegate.mqtt.MqttSubscriber;
 import devicegate.netty.NettyServer;
 import io.netty.channel.Channel;
 import io.netty.util.Attribute;
@@ -17,10 +17,8 @@ import io.netty.util.AttributeKey;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -37,7 +35,7 @@ public class SlaveLaunch implements Launch{
 
     private final NettyServer nettyServer;
 
-    private final MqttSubcriber mqttSubcriber;
+    private final MqttSubscriber mqttSubcriber;
 
     private final DeviceManager cm;
 
@@ -48,7 +46,7 @@ public class SlaveLaunch implements Launch{
     public SlaveLaunch(Configure conf) {
         this.conf = conf;
         this.nettyServer = new NettyServer(this, conf);
-        this.mqttSubcriber = new MqttSubcriber(this, conf);
+        this.mqttSubcriber = new MqttSubscriber(this, conf);
         this.cm = DeviceManager.getInstance();
         this.slaveActor = new SlaveActor(conf, this);
         this.kafkaSender = new KafkaSender(conf);
@@ -210,6 +208,7 @@ public class SlaveLaunch implements Launch{
         Runnable run = new Runnable() {
             public void run() {
                 long lastCleanTime = System.currentTimeMillis();
+                long lastSleepTime = masterPeriod;
                 while (state() == 1) {
                     long currentTime = System.currentTimeMillis();
                     if (lastCleanTime + masterPeriod < currentTime) {
@@ -218,10 +217,11 @@ public class SlaveLaunch implements Launch{
                     }
                     Msg hbMsg = MessageFactory.getMessage(Msg.TYPE.HB);
                     hbMsg.setAddress(slaveActor.systemAddress());
-                    long sleepTime = masterPeriod;
+                    long sleepTime = lastSleepTime;
                     long timeout = conf.getLongOrElse(V.ACTOR_REPLY_TIMEOUT, 2000);
                     try {
                         slaveActor.sendToMasterWithReply(hbMsg, timeout);
+                        sleepTime = masterPeriod;
                     } catch (Exception e) {
                         log.info("HeartBeat failed, decrease the time interval");
                         sleepTime >>= 1;
@@ -231,6 +231,8 @@ public class SlaveLaunch implements Launch{
                         Thread.sleep(sleepTime);
                     } catch (InterruptedException e) {
                         log.info("Slave heartbeat loop sleep error", e);
+                    } finally {
+                        lastSleepTime = sleepTime;
                     }
                 }
             }

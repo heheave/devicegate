@@ -9,6 +9,7 @@ import devicegate.actor.message.AckMessage;
 import devicegate.conf.Configure;
 import devicegate.conf.V;
 import devicegate.launch.SlaveLaunch;
+import org.apache.log4j.Logger;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
@@ -20,6 +21,8 @@ import java.net.InetSocketAddress;
  * Created by xiaoke on 17-5-16.
  */
 public class SlaveActor extends AbstractAkkaActor{
+
+    private static final Logger log = Logger.getLogger(SlaveActor.class);
 
     private ActorSystem system;
 
@@ -75,6 +78,7 @@ public class SlaveActor extends AbstractAkkaActor{
                 system.shutdown();
             }
         }
+        log.info("Actor has been shutdown");
     }
 
     public InetSocketAddress systemAddress() {

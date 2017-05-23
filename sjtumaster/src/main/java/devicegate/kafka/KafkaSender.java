@@ -41,7 +41,7 @@ public class KafkaSender {
                     Serializable msg = msgQueue.take();
                     if (msg != null) {
                         ProducerRecord<String, String> record = new ProducerRecord<String, String>(topic, msg.toString());
-                        Future<RecordMetadata> future = producer.send(record, new Callback() {
+                        producer.send(record, new Callback() {
                             public void onCompletion(RecordMetadata recordMetadata, Exception e) {
                                 log.info("Msg send: offset=" + recordMetadata.offset() + ", partition=" + recordMetadata.partition());
                             }
@@ -69,6 +69,9 @@ public class KafkaSender {
     }
 
     public boolean msgIn(Serializable msg) {
+        if (!isRunning) {
+            return false;
+        }
         if (fullDrop) {
             return msgQueue.offer(msg);
         } else {
@@ -88,17 +91,28 @@ public class KafkaSender {
     }
 
     public void stop() {
-        isRunning = false;
-        synchronized (this) {
-            while(!msgQueue.isEmpty()) {
-                try {
-                    wait(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+        long sleepTryTime = 0;
+        final long sleepTime = conf.getLongOrElse(V.KAFAK_CLOSING_WAITTIME, 1000);
+        if (sleepTime > 0) {
+            synchronized (this) {
+                while(!msgQueue.isEmpty() && sleepTryTime < 3) {
+                    try {
+                        wait(sleepTime);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } finally {
+                        sleepTryTime++;
+                    }
                 }
             }
         }
+        if (!msgQueue.isEmpty()) {
+            log.info(msgQueue.size() + " messages has been dropped because of shutdown");
+        }
+        isRunning = false;
         runner.shutdown();
+        producer.flush();
         producer.close();
+        log.info("Kafka sender has been stopped");
     }
 }

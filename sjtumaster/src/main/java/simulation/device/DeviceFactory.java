@@ -37,7 +37,7 @@ public class DeviceFactory {
 
     private static String getLegalId(Device.TYPE deviceType) {
         String genId = UUID.randomUUID().toString().substring(0, 7).toUpperCase();
-        String actualId = null;
+        String actualId;
         switch (deviceType) {
             case SWITCH:
                 actualId = SWITCH_MAGIC_STRING + "-" + genId;

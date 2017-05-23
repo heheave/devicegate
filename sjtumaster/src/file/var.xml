@@ -3,6 +3,6 @@
     <v name="sjtumaster.master.host">192.168.1.110</v>
     <v name="sjtumaster.slave.host">192.168.1.110</v>
     <v name="sjtumaster.kafka.push.topic">devicegate-topic</v>
-    <v name="sjtumater.kafka.broker.list">192.168.1.111:9092,192.168.1.112:9092,192.168.1.113:9092</v>
+    <v name="sjtumater.kafka.broker.list">192.168.1.110:9092</v>
     <v name="sjtumaster.mqtt.sub.topic">PLATFORM_MQTT_ACCESS_TOPIC</v>
 </variable>

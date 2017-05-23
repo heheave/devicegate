@@ -62,4 +62,5 @@ public class DeviceCacheInfo {
     public void updateTime() {
         updateTime(System.currentTimeMillis());
     }
+
 }

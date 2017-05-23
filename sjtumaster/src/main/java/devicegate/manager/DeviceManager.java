@@ -50,6 +50,7 @@ public class DeviceManager extends AbstactManager<DeviceCacheInfo>{
         }
 
         for (String key: toRemoveKey) {
+            log.info("Close channel " + key + " because of timeout");
             slaveLaunch.removeChannel(key);
         }
         toRemoveKey.clear();

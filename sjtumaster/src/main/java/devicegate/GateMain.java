@@ -5,6 +5,7 @@ import devicegate.conf.V;
 import devicegate.launch.Launch;
 import devicegate.launch.MasterLaunch;
 import devicegate.launch.SlaveLaunch;
+import devicegate.manager.DeviceCacheInfo;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.dom4j.DocumentException;

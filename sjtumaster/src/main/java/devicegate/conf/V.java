@@ -38,11 +38,12 @@ public class V {
     public static final String KAFKA_FULL_DROP = "sjtumaster.kafka.full.drop";
     public static final String KAFKA_PUSH_TOPIC = "sjtumaster.kafka.push.topic";
     public static final String KAFKA_BROKER_LIST = "sjtumater.kafka.broker.list";
-
+    public static final String KAFAK_CLOSING_WAITTIME = "sjtumaster.kafka.closing.waittime";
 
     // used for mqtt
     public static final String MQTT_CONNECT_TIMEOUT = "sjtumaster.mqtt.connect.timeout";
     public static final String MQTT_KEEPALIVE_INTERVAL = "sjtumaster.mqtt.keepalive.interval";
+    public static final String MQTT_RECONNECT_PERIOD = "sjtumaster.mqtt.reconnect.period";
     public static final String MQTT_CLIENT_ID = "sjtumaster.mqtt.client.id";
     public static final String MQTT_SUB_TOPIC = "sjtumaster.mqtt.sub.topic";
 }

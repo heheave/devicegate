@@ -7,13 +7,13 @@ import org.apache.log4j.Logger;
 /**
  * Created by xiaoke on 17-5-18.
  */
-public class MqttSubcriberHandler implements MqttHandler{
+public class MqttSubscriberHandler implements MqttHandler{
 
-    private final Logger log = Logger.getLogger(MqttSubcriberHandler.class);
+    private final Logger log = Logger.getLogger(MqttSubscriberHandler.class);
 
     private final SlaveLaunch slaveLaunch;
 
-    public MqttSubcriberHandler(SlaveLaunch slaveLaunch) {
+    public MqttSubscriberHandler(SlaveLaunch slaveLaunch) {
         this.slaveLaunch = slaveLaunch;
     }
 
