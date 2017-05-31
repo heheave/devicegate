@@ -1,6 +1,7 @@
 package devicegate.launch;
 
 import devicegate.actor.SlaveActor;
+import devicegate.actor.message.AddIdMessage;
 import devicegate.actor.message.MessageFactory;
 import devicegate.actor.message.Msg;
 import devicegate.actor.message.TellMeMessage;
@@ -10,16 +11,25 @@ import devicegate.kafka.KafkaSender;
 import devicegate.manager.DeviceCacheInfo;
 import devicegate.manager.DeviceManager;
 import devicegate.mqtt.MqttSubscriber;
-import devicegate.netty.NettyServer;
+import devicegate.netty.SlaveNettyServer;
+import devicegate.netty.handler.ShowHandler;
+import devicegate.netty.handler.SlaveInDecoderHandler;
+import devicegate.netty.handler.SlaveMessageHandler;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 /**
@@ -33,23 +43,29 @@ public class SlaveLaunch implements Launch{
 
     private final Configure conf;
 
-    private final NettyServer nettyServer;
+    private final SlaveNettyServer nettyServer;
 
     private final MqttSubscriber mqttSubcriber;
 
-    private final DeviceManager cm;
+    private final DeviceManager dm;
 
     private final SlaveActor slaveActor;
 
     private final KafkaSender kafkaSender;
 
+    private final Lock hbLocks;
+
+    private final Condition hbAckCon;
+
     public SlaveLaunch(Configure conf) {
         this.conf = conf;
-        this.nettyServer = new NettyServer(this, conf);
+        this.nettyServer = new SlaveNettyServer(this, conf);
         this.mqttSubcriber = new MqttSubscriber(this, conf);
-        this.cm = DeviceManager.getInstance();
+        this.dm = DeviceManager.getInstance();
         this.slaveActor = new SlaveActor(conf, this);
         this.kafkaSender = new KafkaSender(conf);
+        this.hbLocks = new ReentrantLock();
+        this.hbAckCon = this.hbLocks.newCondition();
         this.state = new AtomicInteger(0);
     }
 
@@ -71,15 +87,17 @@ public class SlaveLaunch implements Launch{
 
     public void shutdown() {
         if (state.compareAndSet(1, 2)) {
-            cm.clear();
+            dm.clear();
             Msg msg = MessageFactory.getMessage(Msg.TYPE.STPSLV);
             msg.setAddress(slaveActor.systemAddress());
             boolean retry = false;
-            try {
-                slaveActor.sendToMasterWithReply(msg);
-            } catch (Exception e) {
-                retry = true;
-                log.info("After stop other parts, we'll retry it");
+            if (slaveActor != null) {
+                try {
+                    slaveActor.sendToMasterWithReply(msg);
+                } catch (Exception e) {
+                    retry = true;
+                    log.info("After stop other parts, we'll retry it");
+                }
             }
             nettyServer.stop();
             mqttSubcriber.stop();
@@ -105,11 +123,12 @@ public class SlaveLaunch implements Launch{
     public boolean addChannel(String id, Channel channel) {
         // added to local manager
         DeviceCacheInfo di = new DeviceCacheInfo(channel, conf.getLongOrElse(V.MASTER_SCHELDULE_PERIOD, 5000));
-        DeviceCacheInfo oldDi = cm.putIfAbsent(id, di);
+        DeviceCacheInfo oldDi = dm.putIfAbsent(id, di);
         if (oldDi == null) {
             // added to remote manager
-            Msg msg = MessageFactory.getMessage(Msg.TYPE.ADDID);
+            AddIdMessage msg = (AddIdMessage)MessageFactory.getMessage(Msg.TYPE.ADDID);
             msg.setId(id);
+            msg.setProtocol(channel == null ? "MQTT": "TCP");
             msg.setAddress(slaveActor.systemAddress());
             slaveActor.sendToRemote(msg, null);
             // bind id to channel
@@ -138,10 +157,11 @@ public class SlaveLaunch implements Launch{
         if (id == null && channel == null) {
             return false;
         } else if (channel == null) {
-            if (cm.remove(id) != null) {
+            if (dm.remove(id) != null) {
                 // remove from remote
                 Msg msg = MessageFactory.getMessage(Msg.TYPE.RMID);
                 msg.setId(id);
+                msg.setAddress(slaveActor.systemAddress());
                 slaveActor.sendToRemote(msg, null);
             }
             return true;
@@ -152,10 +172,11 @@ public class SlaveLaunch implements Launch{
                 String idAttach = attr.get();
                 if (idAttach != null) {
                     // remove from local
-                    if (cm.remove(idAttach) != null) {
+                    if (dm.remove(idAttach) != null) {
                         // remove from remote
                         Msg msg = MessageFactory.getMessage(Msg.TYPE.RMID);
                         msg.setId(idAttach);
+                        msg.setAddress(slaveActor.systemAddress());
                         slaveActor.sendToRemote(msg, null);
                     }
                 }
@@ -173,7 +194,7 @@ public class SlaveLaunch implements Launch{
 
     public void tellToMaster() {
         int maxIds = conf.getIntOrElse(V.ACTOR_TELLME_MAX_IDS, 50);
-        List<String> keys = cm.getAllKeys();
+        List<String> keys = dm.getAllKeys();
         if (keys.isEmpty()) return;
         int keySize = keys.size();
         int resListNum = keySize % maxIds == 0 ? keySize / maxIds : keySize / maxIds + 1;
@@ -196,11 +217,20 @@ public class SlaveLaunch implements Launch{
         for (List<String> li : res) {
             Msg mes = MessageFactory.getMessage(Msg.TYPE.TELLME);
             mes.setAddress(slaveActor.systemAddress());
-            ((TellMeMessage)mes).setIds(li);
+            ((TellMeMessage)mes).setTellInfo(li);
             slaveActor.sendToRemote(mes, null);
             li.clear();
         }
         res.clear();
+    }
+
+    public void heartbeatAckReceived() {
+        hbLocks.lock();
+        try {
+            hbAckCon.signalAll();
+        }finally {
+            hbLocks.unlock();
+        }
     }
 
     public void startHeartbeatThread() {
@@ -213,18 +243,28 @@ public class SlaveLaunch implements Launch{
                     long currentTime = System.currentTimeMillis();
                     if (lastCleanTime + masterPeriod < currentTime) {
                         lastCleanTime = currentTime;
-                        cm.cleanAll(SlaveLaunch.this, currentTime);
+                        dm.cleanAll(SlaveLaunch.this, currentTime);
                     }
                     Msg hbMsg = MessageFactory.getMessage(Msg.TYPE.HB);
                     hbMsg.setAddress(slaveActor.systemAddress());
                     long sleepTime = lastSleepTime;
                     long timeout = conf.getLongOrElse(V.ACTOR_REPLY_TIMEOUT, 2000);
+                    slaveActor.sendToRemote(hbMsg, null);
+                    //slaveActor.sendToMasterWithReply(hbMsg, timeout);
+                    hbLocks.lock();
                     try {
-                        slaveActor.sendToMasterWithReply(hbMsg, timeout);
-                        sleepTime = masterPeriod;
+                        if (!hbAckCon.await(timeout, TimeUnit.MILLISECONDS)) {
+                            log.info("HeartBeat failed, decrease the time interval");
+                            sleepTime >>= 1;
+                        } else {
+                            log.info("HeartBeat succeed, reset the time interval");
+                            sleepTime = masterPeriod;
+                        }
                     } catch (Exception e) {
                         log.info("HeartBeat failed, decrease the time interval");
                         sleepTime >>= 1;
+                    } finally {
+                        hbLocks.unlock();
                     }
                     if (sleepTime < timeout) sleepTime = timeout;
                     try {

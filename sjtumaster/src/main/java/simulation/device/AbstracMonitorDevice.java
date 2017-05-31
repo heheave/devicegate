@@ -1,11 +1,9 @@
 package simulation.device;
 
+import devicegate.conf.JsonField;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import simulation.DeviceValue.DeviceValue;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by xiaoke on 17-5-15.
@@ -82,14 +80,14 @@ abstract public class AbstracMonitorDevice<T extends DeviceValue<?>> implements 
 
     public JSONObject toJson() {
         JSONObject jo = new JSONObject();
-        jo.put("id", id);
-        jo.put("dtype", dtype);
-        jo.put("desc", desc);
-        jo.put("company", company);
-        jo.put("location", location == null ? null : JSONObject.fromObject(location));
-        jo.put("portNum", portNum);
-        jo.put("dtimestamp", dtimestamp);
-        jo.put("mtype", mtype());
+        jo.put(JsonField.DeviceValue.ID, id);
+        jo.put(JsonField.DeviceValue.DTYPE, dtype);
+        jo.put(JsonField.DeviceValue.DESC, desc);
+        jo.put(JsonField.DeviceValue.COM, company);
+        jo.put(JsonField.DeviceValue.LOC, location == null ? null : JSONObject.fromObject(location));
+        jo.put(JsonField.DeviceValue.PORTNUM, portNum);
+        jo.put(JsonField.DeviceValue.DTIMESTAMP, dtimestamp);
+        jo.put(JsonField.DeviceValue.MTYPE, mtype());
         JSONArray ja = new JSONArray();
         for (int i = 0; i < portNum; i++) {
             if (values[i] == null) {
@@ -98,7 +96,7 @@ abstract public class AbstracMonitorDevice<T extends DeviceValue<?>> implements 
                 ja.add(i, JSONObject.fromObject(values[i]));
             }
         }
-        jo.put("values", ja);
+        jo.put(JsonField.DeviceValue.VALUES, ja);
         return jo;
     }
 }

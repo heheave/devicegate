@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Created by xiaoke on 17-5-6.
  */
-public class InDecoderHandler extends ByteToMessageDecoder {
+public class SlaveInDecoderHandler extends ByteToMessageDecoder {
 
     private int limit;
 

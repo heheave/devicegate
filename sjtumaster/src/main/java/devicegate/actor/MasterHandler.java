@@ -75,7 +75,7 @@ public class MasterHandler extends UntypedActor {
         String id = addIdMessage.getId();
         InetSocketAddress isa = addIdMessage.getAddress();
         if (id != null) {
-            MachineManager.getInstance().update(id, isa);
+            MachineManager.getInstance().update(id, isa, addIdMessage.getProtocol());
         }
     }
 
@@ -83,7 +83,11 @@ public class MasterHandler extends UntypedActor {
         String id = rmIdMessage.getId();
         InetSocketAddress isa = rmIdMessage.getAddress();
         if (id != null) {
-            MachineManager.getInstance().remove(id);
+            if (isa != null) {
+                MachineManager.getInstance().remove(id, isa);
+            } else {
+                MachineManager.getInstance().remove(id);
+            }
         }
     }
 
@@ -100,10 +104,11 @@ public class MasterHandler extends UntypedActor {
     private void tellMe(TellMeMessage tellMeMessage) {
         InetSocketAddress isa = tellMeMessage.getAddress();
         if (isa != null) {
-            List<String> ids = tellMeMessage.getIds();
-            if (ids != null) {
-                for (String id : ids) {
-                    MachineManager.getInstance().update(id, isa);
+            List<String> infos = tellMeMessage.getTellInfo();
+            if (infos != null) {
+                for (String info : infos) {
+                    String[] i = info.split(",", 2);
+                    MachineManager.getInstance().update(i[0], isa, i[1]);
                 }
             }
         }

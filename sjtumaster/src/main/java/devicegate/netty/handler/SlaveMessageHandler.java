@@ -1,5 +1,6 @@
 package devicegate.netty.handler;
 
+import devicegate.conf.JsonField;
 import devicegate.launch.SlaveLaunch;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -10,20 +11,20 @@ import org.apache.log4j.Logger;
 /**
  * Created by xiaoke on 17-5-6.
  */
-public class MessageHandler extends ChannelInboundHandlerAdapter {
+public class SlaveMessageHandler extends ChannelInboundHandlerAdapter {
 
-    private static final Logger log = Logger.getLogger(MessageHandler.class);
+    private static final Logger log = Logger.getLogger(SlaveMessageHandler.class);
 
     private final SlaveLaunch slaveLaunch;
 
-    public MessageHandler(SlaveLaunch slaveLaunch) {
+    public SlaveMessageHandler(SlaveLaunch slaveLaunch) {
         this.slaveLaunch = slaveLaunch;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         JSONObject jo = (JSONObject)msg;
-        String id = jo.getString("id");
+        String id = jo.getString(JsonField.DeviceValue.ID);
         if (id != null) {
             slaveLaunch.addChannel(id, ctx.channel());
             slaveLaunch.pushToKafka(jo);

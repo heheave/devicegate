@@ -31,20 +31,22 @@ public class MqttSubscriber {
 
     private final String subTopic;
 
-    private volatile boolean isRec;
+    private boolean isRec;
+
+    private volatile boolean isRunning;
 
     public MqttSubscriber(SlaveLaunch slaveLaunch, Configure conf) {
         this.conf = conf;
         this.defaultOpt = new MqttConnectOptions();
         this.defaultOpt.setAutomaticReconnect(false);
         this.defaultOpt.setCleanSession(false);
-        int mqttConnectTimeout = conf.getIntOrElse(V.MQTT_CONNECT_TIMEOUT, 1000);
-        int mqttKeepaliveInterval = conf.getIntOrElse(V.MQTT_KEEPALIVE_INTERVAL, 20000);
+        int mqttConnectTimeout = conf.getIntOrElse(V.MQTT_CONNECT_TIMEOUT, 10);
+        int mqttKeepaliveInterval = conf.getIntOrElse(V.MQTT_KEEPALIVE_INTERVAL, 20);
         this.defaultOpt.setConnectionTimeout(mqttConnectTimeout);
         this.defaultOpt.setKeepAliveInterval(mqttKeepaliveInterval);
         //this.defaultOpt.setUserName();
         //this.defaultOpt.setPassword();
-        this.subTopic = conf.getStringOrElse(V.MQTT_SUB_TOPIC, "PLATFORM_MQTT_ACCESS_TOPIC");
+        this.subTopic = conf.getStringOrElse(V.MQTT_SUB_TOPIC, "PLATFORM_MQTT_ACCESS_TOPIC"/*"SparkStreamingMQTT"*/);
         this.mqttHandler = new MqttSubscriberHandler(slaveLaunch);
         String brokerAddress = "114.55.92.31";
         //String brokerAddress = conf.getStringOrElse(V.SLAVE_HOST, "114.55.92.31");
@@ -54,6 +56,7 @@ public class MqttSubscriber {
 
 
     public void start() throws Exception {
+        this.isRunning = true;
         String mqttServerUrl = String.format("tcp://%s:%d", subAddress.getAddress().getHostAddress(), subAddress.getPort());
         log.info("subsubsub: " + mqttServerUrl);
         final String mqttClientId = conf.getStringOrElse(V.MQTT_CLIENT_ID, UUID.randomUUID().toString());
@@ -71,12 +74,12 @@ public class MqttSubscriber {
         client.setCallback(new MqttCallback() {
 
             public void connectionLost(Throwable throwable) {
-                log.warn("MQTT connect lost start reconnect runner: " + throwable);
+                log.warn("MQTT connect lost start reconnect runner: ",  throwable);
                 startReconnetRunner();
             }
 
             public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
-                log.info(s);
+                log.info(s + ":" + new String(mqttMessage.getPayload()));
                 if (mqttHandler != null) {
                     mqttHandler.messageIn(s, mqttMessage.getPayload());
                 } else {
@@ -92,10 +95,11 @@ public class MqttSubscriber {
         client.subscribe(subTopic);
     }
 
-    private void startReconnetRunner() {
-        if (isRec) {
+    private synchronized void startReconnetRunner() {
+        if (!isRunning || isRec) {
             return;
         }
+        log.info("Start reconnect and resubscribe runner");
         final long sleepIfFailed = conf.getLongOrElse(V.MQTT_RECONNECT_PERIOD, 5000);
         Runnable run = new Runnable() {
             public void run() {
@@ -109,19 +113,23 @@ public class MqttSubscriber {
                         try {
                             client.connect(defaultOpt);
                             recState = 1;
-                        } catch (MqttException e) {
+                        } catch (Exception e) {
+                            e.printStackTrace();
                             recState = 0;
                         }
                     }
-
+                    log.info("client reconnect state: " + recState);
                     if (recState == 1) {
                         try {
                             client.subscribe(subTopic);
                             recState = 2;
-                        } catch (MqttException e) {
+                        } catch (Exception e) {
+                            e.printStackTrace();
                             recState = client.isConnected() ? 1 : 0;
                         }
                     }
+
+                    log.info("client resubscribe state: " + recState);
 
                     if (recState != 2) {
                         try {
@@ -131,6 +139,7 @@ public class MqttSubscriber {
                         }
                     }
                 }
+                log.info("Reconnect and resubscribe succeeded");
                 isRec = false;
             }
         };
@@ -140,18 +149,24 @@ public class MqttSubscriber {
     }
 
     public void stop() {
-        try {
-            if (!isRec) {
-                log.info("MQTT stop first unsubscribe");
-                this.client.unsubscribe(subTopic);
+        isRunning = false;
+        if (client != null) {
+            try {
+                if (!isRec) {
+                    log.info("MQTT stop first unsubscribe");
+                    client.unsubscribe(subTopic);
+                }
+                log.info("MQTT stop second disconnect and close");
+                if (client.isConnected()) {
+                    client.disconnect();
+                }
+                client.close();
+            } catch (MqttException e) {
+                e.printStackTrace();
             }
-            log.info("MQTT stop second disconnect and close");
-            client.disconnect();
-            client.close();
-            log.info("MQTT subscriber has been stopped");
-        } catch (MqttException e) {
-            e.printStackTrace();
+            this.client = null;
         }
+        log.info("MQTT subscriber has been stopped");
     }
 
     public InetSocketAddress getSubcriberAddress() {

@@ -13,7 +13,46 @@ import java.util.*;
  * Created by xiaoke on 17-5-16.
  */
 
-public class MachineManager extends AbstactManager<InetSocketAddress>{
+class DI {
+
+    private final InetSocketAddress isa;
+
+    private final String ptc;
+
+    public DI(InetSocketAddress isa, String ptc) {
+        this.isa = isa;
+        this.ptc = ptc;
+    }
+
+    public InetSocketAddress getIsa() {
+        return isa;
+    }
+
+    public String getPtc() {
+        return ptc;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        DI di = (DI) o;
+
+        if (isa != null ? !isa.equals(di.isa) : di.isa != null) return false;
+        return ptc != null ? ptc.equals(di.ptc) : di.ptc == null;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = isa != null ? isa.hashCode() : 0;
+        result = 31 * result + (ptc != null ? ptc.hashCode() : 0);
+        return result;
+    }
+}
+
+public class MachineManager extends AbstactManager<DI>{
 
     private static class TimeVersion {
 
@@ -142,9 +181,19 @@ public class MachineManager extends AbstactManager<InetSocketAddress>{
         }
     }
 
-    public void update(String id, InetSocketAddress inetAddr) {
+    public void update(String id, InetSocketAddress inetAddr, String ptc) {
         updateAddress(inetAddr);
-        put(id, inetAddr);
+        put(id, new DI(inetAddr, ptc));
+    }
+
+    public void remove(String id, InetSocketAddress inetAddr) {
+        DI di = idToCacheObj.get(id);
+        if (di != null && di.getIsa().equals(inetAddr)) {
+            DI newDi = new DI(inetAddr, di.getPtc());
+            if (idToCacheObj.remove(id, newDi)) {
+                afterRemoved(di);
+            }
+        }
     }
 
     public void cleanOldAddress(long timeVersion) {
@@ -165,27 +214,44 @@ public class MachineManager extends AbstactManager<InetSocketAddress>{
 
     }
 
-    public void showAllAddress() {
+    public Map<String, List<String>> showAllAddress() {
         // HashMap need synchronized
+        Map<String, List<String>>  result = new HashMap<String, List<String>>();
         synchronized (addrs) {
             for (InetSocketAddress isa : addrs.keySet()) {
-                log.info("\t\tMachine (" + isa.getAddress().getHostAddress() +":" + isa.getPort()+ "): " + addrs.get(isa).timeVersion);
+                String resKey = isa.getAddress().getHostAddress() +":" + isa.getPort();
+                List<String> tmp = new LinkedList<String>();
+                tmp.add(String.valueOf(addrs.get(isa).timeVersion));
+                result.put(resKey, tmp);
+                //log.info("\t\tMachine (" + isa.getAddress().getHostAddress() +":" + isa.getPort()+ "): " + addrs.get(isa).timeVersion);
             }
         }
 
-        for (Map.Entry<String, InetSocketAddress> entry : idToCacheObj.entrySet()) {
+        for (Map.Entry<String, DI> entry : idToCacheObj.entrySet()) {
             if (entry.getValue() != null) {
-                log.info("\t\tDevice (" + entry.getKey() + ") is on machine: " + entry.getValue().getAddress().getHostAddress() + ":" + entry.getValue().getPort());
+                InetSocketAddress isa = entry.getValue().getIsa();
+                if (isa != null) {
+                    String resKey = isa.getAddress().getHostAddress() +":" + isa.getPort();
+                    List<String> tmp = result.get(resKey);
+                    if (tmp != null) {
+                        tmp.add(entry.getKey() + "," + entry.getValue().getPtc());
+                    }
+//                            log.info("\t\tDevice (" + entry.getKey() + ") is on machine: "
+//                            + isa.getAddress().getHostAddress()
+//                            + ":" + isa.getPort() + " using " + entry.getValue().getPtc() + " protocol");
+                }
             }
         }
+
+        return result;
     }
 
     private void removeAll(InetSocketAddress inetAddr) {
         // ConcurrentHashMap doesn't neet synchronized
         // however entry.value may be null under concurrency condition
         List<String> toRemoveKeys = new LinkedList<String>();
-        for (Map.Entry<String, InetSocketAddress> entry : idToCacheObj.entrySet()) {
-            if (inetAddr.equals(entry.getValue())) {
+        for (Map.Entry<String, DI> entry : idToCacheObj.entrySet()) {
+            if (entry.getValue() != null && inetAddr.equals(entry.getValue().getIsa())) {
                 toRemoveKeys.add(entry.getKey());
             }
         }
@@ -196,7 +262,10 @@ public class MachineManager extends AbstactManager<InetSocketAddress>{
     }
 
     @Override
-    void afterRemoved(InetSocketAddress oldValue) {
-        log.info("Channel to " + oldValue.getHostName() + ":" + oldValue.getPort() + " is removed");
+    void afterRemoved(DI oldValue) {
+        InetSocketAddress addr = oldValue.getIsa();
+        if (addr != null) {
+            log.info("Channel to " + addr.getAddress().getHostAddress() + ":" + addr.getPort() + " is removed");
+        }
     }
 }

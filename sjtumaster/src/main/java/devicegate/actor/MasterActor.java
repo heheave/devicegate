@@ -34,8 +34,7 @@ public class MasterActor extends AbstractAkkaActor {
 
     public void start() {
         String masterName = conf.getStringOrElse(V.ACTOR_MASTER_SYSTEM_NAME, "MASTERSYSTEM");
-        //Config config = ConfigFactory.load().getConfig("remoteConf");
-        Config config = ConfigFactory.parseFile(new File("src/file/application.conf")).getConfig("masterConf");
+        Config config = ConfigFactory.parseFile(new File(V.ACTOR_CONF_PATH)).getConfig("masterConf");
         system = ActorSystem.apply(masterName, config);
         String masterPath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH, "ACTORPATH");
         actorRef = system.actorOf(Props.create(MasterHandler.class, this), masterPath);

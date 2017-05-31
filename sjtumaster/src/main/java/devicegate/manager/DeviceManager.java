@@ -33,8 +33,16 @@ public class DeviceManager extends AbstactManager<DeviceCacheInfo>{
 
     public List<String> getAllKeys() {
         List<String> keysCopy = new LinkedList<String>();
-        for (String str: idToCacheObj.keySet()) {
-            keysCopy.add(new String(str));
+        for (Map.Entry<String, DeviceCacheInfo> entry: idToCacheObj.entrySet()) {
+            if (entry != null) {
+                String ptc;
+                if (entry.getValue().getChannel() != null) {
+                    ptc = V.TCP;
+                } else {
+                    ptc = V.MQTT;
+                }
+                keysCopy.add(String.format("%s,%s", entry.getKey(), ptc));
+            }
         }
         return keysCopy;
     }

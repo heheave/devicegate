@@ -4,10 +4,14 @@ import devicegate.actor.MasterActor;
 import devicegate.conf.Configure;
 import devicegate.conf.V;
 import devicegate.manager.MachineManager;
+import devicegate.netty.MasterNettyServer;
 import org.apache.log4j.Logger;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by xiaoke on 17-5-16.
@@ -26,6 +30,8 @@ public class MasterLaunch implements Launch{
 
     private final ScheduledThreadPoolExecutor es;
 
+    private final MasterNettyServer nettyServer;
+
     //private volatile boolean needPing;
 
     //private final String addrSnapshotPath;
@@ -34,16 +40,15 @@ public class MasterLaunch implements Launch{
         this.conf = conf;
         this.masterActor = new MasterActor(conf);
         this.mm = MachineManager.getInstance();
-        this.state = new AtomicInteger();
+        this.nettyServer = new MasterNettyServer(conf);
         this.es = new ScheduledThreadPoolExecutor(1);
-        //this.needPing = false;
-        //this.addrSnapshotPath = conf.getStringOrElse(V.MASTER_ADDR_SNAPSHOT, "snapshot/addr.spt");
+        this.state = new AtomicInteger(0);
     }
 
     public void launch() throws Exception{
         if (state.compareAndSet(0, 1)) {
             masterActor.start();
-            //mm.loadFrom(masterActor, addrSnapshotPath);
+            nettyServer.start();
             startShedualTask();
         } else {
             throw new RuntimeException("Failed to launch in state: " + state.get());
@@ -52,9 +57,10 @@ public class MasterLaunch implements Launch{
 
     public void shutdown() {
         if (state.compareAndSet(1, 2)) {
+            mm.clear();
             es.shutdown();
+            nettyServer.stop();
             masterActor.stop();
-            //mm.storeTo(addrSnapshotPath);
         } else {
             throw new RuntimeException("Failed to shutdown in state: " + state.get());
         }
@@ -70,7 +76,6 @@ public class MasterLaunch implements Launch{
         es.scheduleAtFixedRate(new Runnable() {
             public void run() {
                 mm.cleanOldAddress(System.currentTimeMillis() - (period << 1));
-                mm.showAllAddress();
             }
         }, delay, period, TimeUnit.MILLISECONDS);
     }

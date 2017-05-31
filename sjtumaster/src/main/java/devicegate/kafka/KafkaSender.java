@@ -3,12 +3,17 @@ package devicegate.kafka;
 import devicegate.conf.Configure;
 import devicegate.conf.V;
 import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.errors.*;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.log4j.Logger;
 
 import java.io.Serializable;
 import java.util.Properties;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by xiaoke on 17-5-17.
@@ -27,23 +32,27 @@ public class KafkaSender {
 
     private final boolean fullDrop;
 
-    private volatile boolean  isRunning;
+    private volatile boolean isRunning;
 
-    private final Properties producerPropertis;
+    private volatile Properties producerPropertis;
 
-    private final Producer<String, String> producer;
+    private Producer<String, String> producer;
 
     private final Runnable run = new Runnable() {
         public void run() {
             final String topic = conf.getStringOrElse(V.KAFKA_PUSH_TOPIC, "devicegate-topic");
             while(isRunning) {
                 try {
-                    Serializable msg = msgQueue.take();
+                    final Serializable msg = msgQueue.take();
                     if (msg != null) {
-                        ProducerRecord<String, String> record = new ProducerRecord<String, String>(topic, msg.toString());
+                        final ProducerRecord<String, String> record = new ProducerRecord<String, String>(topic, msg.toString());
                         producer.send(record, new Callback() {
                             public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-                                log.info("Msg send: offset=" + recordMetadata.offset() + ", partition=" + recordMetadata.partition());
+                                if (recordMetadata != null) {
+                                    log.info("Msg send: offset=" + recordMetadata.offset() + ", partition=" + recordMetadata.partition());
+                                } else {
+                                    log.info("Kafka send error", e);
+                                }
                             }
                         });
                     }
@@ -57,15 +66,14 @@ public class KafkaSender {
     public KafkaSender(Configure conf) {
         this.conf = conf;
         this.runner = Executors.newSingleThreadExecutor();
-        fullDrop = conf.getBooleanOrElse(V.KAFKA_FULL_DROP, true);
+        this.fullDrop = conf.getBooleanOrElse(V.KAFKA_FULL_DROP, true);
         int queueCompacity = conf.getIntOrElse(V.KAFKA_QUEUE_COMPACITY, 10000);
         this.msgQueue = new ArrayBlockingQueue<Serializable>(queueCompacity);
         String brokerList = conf.getStringOrElse(V.KAFKA_BROKER_LIST, BROKER_LIST);
-        producerPropertis = new Properties();
-        producerPropertis.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList);
-        producerPropertis.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        producerPropertis.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        producer = new KafkaProducer<String, String>(producerPropertis);
+        this.producerPropertis = new Properties();
+        this.producerPropertis.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList);
+        this.producerPropertis.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        this.producerPropertis.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
     }
 
     public boolean msgIn(Serializable msg) {
@@ -88,31 +96,38 @@ public class KafkaSender {
     public void start() {
         isRunning = true;
         runner.submit(run);
+        producer = new KafkaProducer<String, String>(producerPropertis);
     }
 
     public void stop() {
-        long sleepTryTime = 0;
-        final long sleepTime = conf.getLongOrElse(V.KAFAK_CLOSING_WAITTIME, 1000);
-        if (sleepTime > 0) {
-            synchronized (this) {
-                while(!msgQueue.isEmpty() && sleepTryTime < 3) {
-                    try {
-                        wait(sleepTime);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } finally {
-                        sleepTryTime++;
+        if (producer != null) {
+            long sleepTryTime = 0;
+            final long sleepTime = conf.getLongOrElse(V.KAFAK_CLOSING_WAITTIME, 1000);
+            if (sleepTime > 0) {
+                synchronized (this) {
+                    while (!msgQueue.isEmpty() && sleepTryTime < 3) {
+                        try {
+                            wait(sleepTime);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        } finally {
+                            sleepTryTime++;
+                        }
                     }
                 }
             }
+            isRunning = false;
+            runner.shutdown();
+            producer.flush();
+            producer.close();
+            producerPropertis.clear();
+        } else {
+            isRunning = false;
         }
         if (!msgQueue.isEmpty()) {
             log.info(msgQueue.size() + " messages has been dropped because of shutdown");
+            msgQueue.clear();
         }
-        isRunning = false;
-        runner.shutdown();
-        producer.flush();
-        producer.close();
         log.info("Kafka sender has been stopped");
     }
 }

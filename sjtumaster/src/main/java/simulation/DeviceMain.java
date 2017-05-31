@@ -1,5 +1,6 @@
 package simulation;
 
+import devicegate.conf.V;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.net.SocketServer;
@@ -82,12 +83,12 @@ public class DeviceMain {
     }
 
     public static void main(String[] args) {
-        PropertyConfigurator.configure("src/file/log4j.properties");
+        PropertyConfigurator.configure(V.LOG_PATH);
         log.info("starting...");
         final ScheduledExecutorService es = Executors.newScheduledThreadPool(3);
-        es.scheduleAtFixedRate(new SendRun(Device.TYPE.SWITCH, 1), 1000, 5000, TimeUnit.MILLISECONDS);
-        es.scheduleAtFixedRate(new SendRun(Device.TYPE.DIGITAL, 2), 1000, 5000, TimeUnit.MILLISECONDS);
-        es.scheduleAtFixedRate(new SendRun(Device.TYPE.ANALOG, 4), 1000, 5000, TimeUnit.MILLISECONDS);
+        es.scheduleAtFixedRate(new SendRun(Device.TYPE.SWITCH, 1), 1000, 15000, TimeUnit.MILLISECONDS);
+        es.scheduleAtFixedRate(new SendRun(Device.TYPE.DIGITAL, 2), 1000, 15000, TimeUnit.MILLISECONDS);
+        es.scheduleAtFixedRate(new SendRun(Device.TYPE.ANALOG, 4), 1000, 15000, TimeUnit.MILLISECONDS);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 es.shutdown();

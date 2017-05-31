@@ -63,7 +63,7 @@ public class SlaveActor extends AbstractAkkaActor{
     public void start() {
         String slaveName = conf.getStringOrElse(V.ACTOR_SLAVE_SYSTEM_NAME, "SLAVESYSTEM");
         //Config config = ConfigFactory.load().getConfig("localConf");
-        Config config = ConfigFactory.parseFile(new File("src/file/application.conf")).getConfig("slaveConf");
+        Config config = ConfigFactory.parseFile(new File(V.ACTOR_CONF_PATH)).getConfig("slaveConf");
         system = ActorSystem.apply(slaveName, config);
         String slavePath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH, "ACTORPATH");
         actorRef = system.actorOf(Props.create(SlaveHandler.class, slaveLaunch, systemAddress), slavePath);
@@ -73,10 +73,12 @@ public class SlaveActor extends AbstractAkkaActor{
         if (system != null) {
             if (actorRef != null) {
                 system.stop(actorRef);
+                actorRef = null;
             }
             if (!system.isTerminated()) {
                 system.shutdown();
             }
+            system = null;
         }
         log.info("Actor has been shutdown");
     }

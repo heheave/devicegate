@@ -1,5 +1,6 @@
 package devicegate.actor.message;
 
+import devicegate.conf.JsonField;
 import net.sf.json.JSONObject;
 
 import java.io.Serializable;
@@ -66,12 +67,12 @@ public abstract class Msg implements Serializable{
     }
 
     public void setId(String id) {
-        data.put("id", id);
+        data.put(JsonField.MSG.ID, id);
     }
 
     public String getId() {
-        if(data.containsKey("id")) {
-            return data.getString("id");
+        if(data.containsKey(JsonField.MSG.ID)) {
+            return data.getString(JsonField.MSG.ID);
         } else {
             return null;
         }
@@ -79,15 +80,15 @@ public abstract class Msg implements Serializable{
 
     public void setAddress(InetSocketAddress isa) {
         if (isa != null){
-            data.put("host", isa.getAddress().getCanonicalHostName());
-            data.put("port", isa.getPort());
+            data.put(JsonField.MSG.HOST, isa.getAddress().getCanonicalHostName());
+            data.put(JsonField.MSG.PROT, isa.getPort());
         }
     }
 
     public InetSocketAddress getAddress() {
-        if (data.containsKey("host")) {
-            String host = data.getString("host");
-            int port = data.getInt("port");
+        if (data.containsKey(JsonField.MSG.HOST)) {
+            String host = data.getString(JsonField.MSG.HOST);
+            int port = data.getInt(JsonField.MSG.PROT);
             return new InetSocketAddress(host, port);
         } else {
             return null;
