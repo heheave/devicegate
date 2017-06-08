@@ -16,12 +16,8 @@ public class DeviceFactory {
     private static final Set<String> deviceIds = new HashSet<String>();
 
     public static AbstracMonitorDevice getMonitorDevice(Device.TYPE deviceType, int portNum) {
-        String actualId = null;
-        while ((actualId = getLegalId(deviceType)) == null) {
-
-        }
-
         AbstracMonitorDevice device = null;
+        String actualId = getLegalId(deviceType);
         switch (deviceType) {
             case SWITCH:
                 device = new SwitchDevice(actualId, portNum);
@@ -36,17 +32,17 @@ public class DeviceFactory {
     }
 
     private static String getLegalId(Device.TYPE deviceType) {
-        String genId = UUID.randomUUID().toString().substring(0, 7).toUpperCase();
+        //String genId = UUID.randomUUID().toString().substring(0, 7).toUpperCase();
         String actualId;
         switch (deviceType) {
             case SWITCH:
-                actualId = SWITCH_MAGIC_STRING + "-" + genId;
+                actualId = SWITCH_MAGIC_STRING + "-" + "ABC001";
                 break;
             case DIGITAL:
-                actualId = DIGITAL_MAGIC_STRING + "-" + genId;
+                actualId = DIGITAL_MAGIC_STRING + "-" + "ABC002";
                 break;
             default:
-                actualId = ANALOG_MAGIC_STRING + "-" + genId;
+                actualId = ANALOG_MAGIC_STRING + "-" + "ABC003";
         }
         synchronized (deviceIds) {
             if (deviceIds.contains(actualId)) {

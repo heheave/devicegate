@@ -12,9 +12,13 @@ public class V {
     public static final String MQTT = "MQTT";
     public static final String TCP = "TCP";
 
+    public static final String DEVICE_CNT_NOT_AUTH = "sjtumaster.device.cnt.not.auth";
+    public static final String DEVICE_MSG_ACK = "sjtumaster.device.msg.ack";
+
     // used for base
     public static final String MASTER_HOST = "sjtumaster.master.host";
     public static final String SLAVE_HOST= "sjtumaster.slave.host";
+    public static final String SLAVE_SESSION_TIMEOUT = "sjtumaster.salve.session.timeout";
     public static final String MASTER_SCHELDULE_DELAY = "sjtumaster.master.schedule.delay";
     public static final String MASTER_SCHELDULE_PERIOD = "sjtumaster.master.schedule.period";
 
@@ -47,6 +51,7 @@ public class V {
     public static final String MQTT_CONNECT_TIMEOUT = "sjtumaster.mqtt.connect.timeout";
     public static final String MQTT_KEEPALIVE_INTERVAL = "sjtumaster.mqtt.keepalive.interval";
     public static final String MQTT_RECONNECT_PERIOD = "sjtumaster.mqtt.reconnect.period";
+    public static final String MQTT_PUB_QUEUE_SIZE = "sjtumaster.mqtt.pub.queue.size";
     public static final String MQTT_CLIENT_ID = "sjtumaster.mqtt.client.id";
     public static final String MQTT_SUB_TOPIC = "sjtumaster.mqtt.sub.topic";
 }

@@ -52,7 +52,7 @@ class DI {
     }
 }
 
-public class MachineManager extends AbstactManager<DI>{
+public class MachineManager extends AbstactManager<String, DI>{
 
     private static class TimeVersion {
 

@@ -9,15 +9,16 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
 import java.net.InetSocketAddress;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 
 /**
  * Created by xiaoke on 17-5-18.
  */
-public class MqttSubscriber {
+public class MqttProxyClient {
 
-    private static final Logger log = Logger.getLogger(MqttSubscriber.class);
+    private static final Logger log = Logger.getLogger(MqttProxyClient.class);
 
     private final Configure conf;
 
@@ -35,19 +36,34 @@ public class MqttSubscriber {
 
     private volatile boolean isRunning;
 
-    public MqttSubscriber(SlaveLaunch slaveLaunch, Configure conf) {
+    private static class PubThing {
+
+        private final String topic;
+
+        private final String message;
+
+        public PubThing(String topic, String message) {
+            this.topic = topic;
+            this.message = message;
+        }
+    }
+    
+    private final BlockingQueue<PubThing> pubBuffer;
+
+    public MqttProxyClient(SlaveLaunch slaveLaunch, Configure conf) {
         this.conf = conf;
         this.defaultOpt = new MqttConnectOptions();
         this.defaultOpt.setAutomaticReconnect(false);
         this.defaultOpt.setCleanSession(false);
-        int mqttConnectTimeout = conf.getIntOrElse(V.MQTT_CONNECT_TIMEOUT, 10);
-        int mqttKeepaliveInterval = conf.getIntOrElse(V.MQTT_KEEPALIVE_INTERVAL, 20);
+        int mqttConnectTimeout = conf.getIntOrElse(V.MQTT_CONNECT_TIMEOUT, 1000);
+        int mqttKeepaliveInterval = conf.getIntOrElse(V.MQTT_KEEPALIVE_INTERVAL, 2000);
         this.defaultOpt.setConnectionTimeout(mqttConnectTimeout);
         this.defaultOpt.setKeepAliveInterval(mqttKeepaliveInterval);
         //this.defaultOpt.setUserName();
         //this.defaultOpt.setPassword();
+        this.pubBuffer = new ArrayBlockingQueue<PubThing>(conf.getIntOrElse(V.MQTT_PUB_QUEUE_SIZE, 1000));
         this.subTopic = conf.getStringOrElse(V.MQTT_SUB_TOPIC, "PLATFORM_MQTT_ACCESS_TOPIC"/*"SparkStreamingMQTT"*/);
-        this.mqttHandler = new MqttSubscriberHandler(slaveLaunch);
+        this.mqttHandler = new MqttMessageHandler(slaveLaunch);
         String brokerAddress = "114.55.92.31";
         //String brokerAddress = conf.getStringOrElse(V.SLAVE_HOST, "114.55.92.31");
         this.subAddress = new InetSocketAddress(brokerAddress, 1883);
@@ -81,7 +97,7 @@ public class MqttSubscriber {
             public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
                 log.info(s + ":" + new String(mqttMessage.getPayload()));
                 if (mqttHandler != null) {
-                    mqttHandler.messageIn(s, mqttMessage.getPayload());
+                    mqttHandler.messageIn(MqttProxyClient.this, s, mqttMessage.getPayload());
                 } else {
                     log.warn("MQTT handler is not set, message from topic " + s + " will be dropped");
                 }
@@ -93,6 +109,43 @@ public class MqttSubscriber {
         });
         log.info(subTopic);
         client.subscribe(subTopic);
+        startPubRunner();
+    }
+
+    public boolean pub(String topic, String message) {
+        if (topic == null || message == null) {
+            throw new NullPointerException("topic and message could not be null in mqtt pub");
+        } else {
+            PubThing pt = new PubThing(topic, message);
+            if (!pubBuffer.offer(pt)) {
+                log.warn("mqtt pub buffer is full you message will be dropped");
+                return false;
+            }
+            return true;
+        }
+    }
+
+    private void startPubRunner() {
+        Runnable run = new Runnable() {
+            public void run() {
+                while (isRunning) {
+                    try {
+                        PubThing pt = pubBuffer.take();
+                        if (pt != null) {
+                           client.publish(pt.topic, new MqttMessage(pt.message.getBytes()));
+                        }
+                    } catch (InterruptedException e) {
+                        log.warn("take pub message error", e);
+                    } catch (MqttException e) {
+                        log.warn("pub mqtt message error", e);
+                    }
+
+                }
+            }
+        };
+        Thread t = new Thread(run);
+        t.setDaemon(true);
+        t.start();
     }
 
     private synchronized void startReconnetRunner() {

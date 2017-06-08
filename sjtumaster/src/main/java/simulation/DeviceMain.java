@@ -1,6 +1,8 @@
 package simulation;
 
+import devicegate.conf.JsonField;
 import devicegate.conf.V;
+import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.net.SocketServer;
@@ -9,6 +11,7 @@ import simulation.device.AbstracMonitorDevice;
 import simulation.device.Device;
 import simulation.device.DeviceFactory;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -27,11 +30,15 @@ public class DeviceMain {
 
     private static final Logger log = Logger.getLogger(DeviceMain.class);
 
+
+
     private static class SendRun implements Runnable {
 
         private final AbstracMonitorDevice<AbstractDeviceValue<?>> device;
 
         private Socket s;
+
+        private volatile boolean isCnt;
 
         public SendRun(Device.TYPE type, int portNum) {
             device = DeviceFactory.getMonitorDevice(type, portNum);
@@ -39,6 +46,7 @@ public class DeviceMain {
             try {
                 s.connect(new InetSocketAddress("192.168.1.110", 10000));
                 s.setKeepAlive(true);
+                isCnt = cnt();
             } catch (IOException e) {
                 try {
                     s.close();
@@ -50,13 +58,49 @@ public class DeviceMain {
         }
 
         public void run() {
-            try {
-                monitorOnce(device);
-                log.info(device.toJson().toString());
-                sendDataToRemote(device.toJson().toString());
-            }catch (Exception e) {
-                e.printStackTrace();
+            if (isCnt) {
+                try {
+                    monitorOnce(device);
+                    log.info(device.toJson().toString());
+                    sendDataToRemote(device.toJson().toString());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                log.warn("Not connected");
             }
+        }
+
+        private boolean cnt() {
+            try {
+                JSONObject jo = new JSONObject();
+                jo.put(JsonField.DeviceValue.CNT, true);
+                jo.put(JsonField.DeviceValue.ID, device.id());
+                jo.put(JsonField.DeviceValue.MTYPE, device.mtype());
+                jo.put(JsonField.DeviceValue.DESC, "pm2.5");
+                String str = jo.toString();
+                DataOutputStream dou = new DataOutputStream(s.getOutputStream());
+                byte[] bytes = str.getBytes();
+                dou.writeInt(bytes.length);
+                dou.write(bytes, 0, bytes.length);
+                dou.flush();
+                DataInputStream dis = new DataInputStream(s.getInputStream());
+                int retSize = dis.readInt();
+                byte[] bytes1 = new byte[retSize];
+                dis.readFully(bytes1, 0, retSize);
+                System.out.println(new String(bytes1));
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+                try {
+                    if (s != null) {
+                        s.close();
+                    }
+                } catch (IOException ioe) {
+                    // ignore
+                }
+            }
+            return false;
         }
 
         private void sendDataToRemote(String str) {

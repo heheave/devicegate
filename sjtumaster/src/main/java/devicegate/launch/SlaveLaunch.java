@@ -10,20 +10,15 @@ import devicegate.conf.V;
 import devicegate.kafka.KafkaSender;
 import devicegate.manager.DeviceCacheInfo;
 import devicegate.manager.DeviceManager;
-import devicegate.mqtt.MqttSubscriber;
+import devicegate.mqtt.MqttProxyClient;
 import devicegate.netty.SlaveNettyServer;
-import devicegate.netty.handler.ShowHandler;
-import devicegate.netty.handler.SlaveInDecoderHandler;
-import devicegate.netty.handler.SlaveMessageHandler;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,7 +40,7 @@ public class SlaveLaunch implements Launch{
 
     private final SlaveNettyServer nettyServer;
 
-    private final MqttSubscriber mqttSubcriber;
+    private final MqttProxyClient mqttSubcriber;
 
     private final DeviceManager dm;
 
@@ -60,13 +55,21 @@ public class SlaveLaunch implements Launch{
     public SlaveLaunch(Configure conf) {
         this.conf = conf;
         this.nettyServer = new SlaveNettyServer(this, conf);
-        this.mqttSubcriber = new MqttSubscriber(this, conf);
+        this.mqttSubcriber = new MqttProxyClient(this, conf);
         this.dm = DeviceManager.getInstance();
         this.slaveActor = new SlaveActor(conf, this);
         this.kafkaSender = new KafkaSender(conf);
         this.hbLocks = new ReentrantLock();
         this.hbAckCon = this.hbLocks.newCondition();
         this.state = new AtomicInteger(0);
+    }
+
+    public Configure getConf() {
+        return conf;
+    }
+
+    public DeviceManager getDm() {
+        return dm;
     }
 
     public void launch() throws Exception{
@@ -120,29 +123,24 @@ public class SlaveLaunch implements Launch{
         return state.get();
     }
 
-    public boolean addChannel(String id, Channel channel) {
+    public DeviceCacheInfo addChannel(String id, Channel channel) {
         // added to local manager
-        DeviceCacheInfo di = new DeviceCacheInfo(channel, conf.getLongOrElse(V.MASTER_SCHELDULE_PERIOD, 5000));
-        DeviceCacheInfo oldDi = dm.putIfAbsent(id, di);
-        if (oldDi == null) {
-            // added to remote manager
-            AddIdMessage msg = (AddIdMessage)MessageFactory.getMessage(Msg.TYPE.ADDID);
-            msg.setId(id);
-            msg.setProtocol(channel == null ? "MQTT": "TCP");
-            msg.setAddress(slaveActor.systemAddress());
-            slaveActor.sendToRemote(msg, null);
+        DeviceCacheInfo di = new DeviceCacheInfo(id, channel, conf.getLongOrElse(V.SLAVE_SESSION_TIMEOUT, 30000));
+        dm.put(id, di);
+        // added to remote manager
+        AddIdMessage msg = (AddIdMessage)MessageFactory.getMessage(Msg.TYPE.ADDID);
+        msg.setId(id);
+        msg.setProtocol(channel == null ? "MQTT": "TCP");
+        msg.setAddress(slaveActor.systemAddress());
+        slaveActor.sendToRemote(msg, null);
             // bind id to channel
-            if (channel != null) {
-                Attribute<String> attr = channel.attr(AttributeKey.<String>valueOf(V.NETTY_CHANNEL_ATTR_KEY));
-                if (attr != null) {
-                    attr.setIfAbsent(id);
-                }
+        if (channel != null) {
+            Attribute<String> attr = channel.attr(AttributeKey.<String>valueOf(V.NETTY_CHANNEL_ATTR_KEY));
+            if (attr != null) {
+                attr.setIfAbsent(id);
             }
-            return true;
-        } else {
-            oldDi.updateTime();
-            return true;
         }
+        return di;
     }
 
     public boolean removeChannel(String id) {
@@ -239,6 +237,11 @@ public class SlaveLaunch implements Launch{
             public void run() {
                 long lastCleanTime = System.currentTimeMillis();
                 long lastSleepTime = masterPeriod;
+                try {
+                    Thread.sleep(masterPeriod);
+                } catch (InterruptedException e) {
+                    log.warn("slave heartbeat sleep for delay error", e);
+                }
                 while (state() == 1) {
                     long currentTime = System.currentTimeMillis();
                     if (lastCleanTime + masterPeriod < currentTime) {

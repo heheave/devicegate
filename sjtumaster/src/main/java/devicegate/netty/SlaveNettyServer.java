@@ -2,6 +2,7 @@ package devicegate.netty;
 
 import devicegate.conf.Configure;
 import devicegate.conf.V;
+import devicegate.netty.handler.OutEncoderHandler;
 import devicegate.netty.handler.SlaveInDecoderHandler;
 import devicegate.netty.handler.SlaveMessageHandler;
 import devicegate.netty.handler.ShowHandler;
@@ -62,7 +63,7 @@ public class SlaveNettyServer {
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             socketChannel.pipeline().addLast(new SlaveInDecoderHandler());
                             socketChannel.pipeline().addLast(new SlaveMessageHandler(belongsToLaunch));
-                            socketChannel.pipeline().addLast(new ShowHandler());
+                            socketChannel.pipeline().addLast(new OutEncoderHandler());
                         }
                     });
             ChannelFuture future = bootstrap.bind(bindAddress).sync();

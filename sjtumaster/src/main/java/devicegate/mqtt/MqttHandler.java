@@ -5,6 +5,6 @@ package devicegate.mqtt;
  */
 public interface MqttHandler {
 
-    void messageIn(String topic, byte[] bytes);
+    void messageIn(MqttProxyClient client, String topic, byte[] bytes);
 
 }

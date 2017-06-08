@@ -45,6 +45,7 @@ public class KafkaSender {
                 try {
                     final Serializable msg = msgQueue.take();
                     if (msg != null) {
+                        log.info("Sending info is: " + msg.toString());
                         final ProducerRecord<String, String> record = new ProducerRecord<String, String>(topic, msg.toString());
                         producer.send(record, new Callback() {
                             public void onCompletion(RecordMetadata recordMetadata, Exception e) {

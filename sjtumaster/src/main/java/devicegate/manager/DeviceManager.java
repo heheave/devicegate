@@ -13,7 +13,7 @@ import java.util.*;
 /**
  * Created by xiaoke on 17-5-16.
  */
-public class DeviceManager extends AbstactManager<DeviceCacheInfo>{
+public class DeviceManager extends AbstactManager<String, DeviceCacheInfo>{
 
     private static final Logger log = Logger.getLogger(DeviceManager.class);
 
@@ -41,7 +41,7 @@ public class DeviceManager extends AbstactManager<DeviceCacheInfo>{
                 } else {
                     ptc = V.MQTT;
                 }
-                keysCopy.add(String.format("%s,%s", entry.getKey(), ptc));
+                keysCopy.add(String.format("%s,%s", entry.getValue(), ptc));
             }
         }
         return keysCopy;

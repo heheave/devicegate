@@ -8,19 +8,19 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Created by xiaoke on 17-5-16.
  */
-abstract public class AbstactManager<T> {
+abstract public class AbstactManager<K, T> {
 
-    protected final ConcurrentHashMap<String, T> idToCacheObj;
+    protected final ConcurrentHashMap<K, T> idToCacheObj;
 
     public AbstactManager() {
-        idToCacheObj = new ConcurrentHashMap<String, T>();
+        idToCacheObj = new ConcurrentHashMap<K, T>();
     }
 
-    public T putIfAbsent(String id, T newValue) {
+    public T putIfAbsent(K id, T newValue) {
         return idToCacheObj.putIfAbsent(id, newValue);
     }
 
-    public T put(String id, T newValue) {
+    public T put(K id, T newValue) {
         T oldValue = idToCacheObj.put(id, newValue);
         if (oldValue != null) {
             afterRemoved(oldValue);
@@ -28,11 +28,11 @@ abstract public class AbstactManager<T> {
         return oldValue;
     }
 
-    public T get(String id) {
+    public T get(K id) {
         return idToCacheObj.get(id);
     }
 
-    public T remove(String id) {
+    public T remove(K id) {
         T oldValue = idToCacheObj.remove(id);
         if (oldValue != null) {
             afterRemoved(oldValue);
@@ -40,7 +40,7 @@ abstract public class AbstactManager<T> {
         return oldValue;
     }
 
-    public boolean containsKey(String id) {
+    public boolean containsKey(K id) {
         return idToCacheObj.containsKey(id);
     }
 
