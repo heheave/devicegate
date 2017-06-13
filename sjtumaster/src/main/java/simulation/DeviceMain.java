@@ -5,12 +5,13 @@ import devicegate.conf.V;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import org.apache.log4j.net.SocketServer;
 import simulation.DeviceValue.*;
 import simulation.device.AbstracMonitorDevice;
 import simulation.device.Device;
 import simulation.device.DeviceFactory;
+import simulation.view.DeviceFrame;
 
+import javax.swing.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -131,7 +132,7 @@ public class DeviceMain {
         log.info("starting...");
         final ScheduledExecutorService es = Executors.newScheduledThreadPool(3);
         es.scheduleAtFixedRate(new SendRun(Device.TYPE.SWITCH, 1), 1000, 15000, TimeUnit.MILLISECONDS);
-        es.scheduleAtFixedRate(new SendRun(Device.TYPE.DIGITAL, 2), 1000, 15000, TimeUnit.MILLISECONDS);
+        es.scheduleAtFixedRate(new SendRun(Device.TYPE.DIGITL, 2), 1000, 15000, TimeUnit.MILLISECONDS);
         es.scheduleAtFixedRate(new SendRun(Device.TYPE.ANALOG, 4), 1000, 15000, TimeUnit.MILLISECONDS);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
@@ -139,6 +140,7 @@ public class DeviceMain {
                 log.info("shutdown!!!");
             }
         });
+        //JFrame jFrame = new DeviceFrame("ABC001");
 
     }
 
@@ -146,7 +148,7 @@ public class DeviceMain {
         for (int i = 0; i < device.portNum(); i++) {
             if (device.mtype().equals("SWITCH")) {
                 device.setValue(i, new BooleanDeviceValue(ran.nextBoolean()));
-            } else if (device.mtype().equals("DIGITAL")) {
+            } else if (device.mtype().equals("DIGITL")) {
                 device.setValue(i, new IntegerDeviceValue(ran.nextInt(100), "cnt"));
                 i += 1;
             } else {

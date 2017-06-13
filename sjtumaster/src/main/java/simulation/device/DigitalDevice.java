@@ -20,6 +20,6 @@ public class DigitalDevice extends AbstracMonitorDevice<IntegerDeviceValue> {
     }
 
     public String mtype() {
-        return TYPE.DIGITAL.name();
+        return TYPE.DIGITL.name();
     }
 }

@@ -3,17 +3,12 @@ package devicegate.kafka;
 import devicegate.conf.Configure;
 import devicegate.conf.V;
 import org.apache.kafka.clients.producer.*;
-import org.apache.kafka.common.errors.*;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.log4j.Logger;
 
 import java.io.Serializable;
 import java.util.Properties;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by xiaoke on 17-5-17.
@@ -58,7 +53,7 @@ public class KafkaSender {
                         });
                     }
                 } catch (InterruptedException e) {
-                    log.info("Take msg from msgQueue error: " + e);
+                    log.warn("Take msg from msgQueue error: " + e);
                 }
             }
         }
@@ -103,7 +98,7 @@ public class KafkaSender {
     public void stop() {
         if (producer != null) {
             long sleepTryTime = 0;
-            final long sleepTime = conf.getLongOrElse(V.KAFAK_CLOSING_WAITTIME, 1000);
+            final long sleepTime = conf.getLongOrElse(V.KAFKA_CLOSING_WAITTIME, 1000);
             if (sleepTime > 0) {
                 synchronized (this) {
                     while (!msgQueue.isEmpty() && sleepTryTime < 3) {

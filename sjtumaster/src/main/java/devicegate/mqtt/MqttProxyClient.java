@@ -47,7 +47,7 @@ public class MqttProxyClient {
             this.message = message;
         }
     }
-    
+
     private final BlockingQueue<PubThing> pubBuffer;
 
     public MqttProxyClient(SlaveLaunch slaveLaunch, Configure conf) {

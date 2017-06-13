@@ -45,7 +45,7 @@ public class V {
     public static final String KAFKA_FULL_DROP = "sjtumaster.kafka.full.drop";
     public static final String KAFKA_PUSH_TOPIC = "sjtumaster.kafka.push.topic";
     public static final String KAFKA_BROKER_LIST = "sjtumater.kafka.broker.list";
-    public static final String KAFAK_CLOSING_WAITTIME = "sjtumaster.kafka.closing.waittime";
+    public static final String KAFKA_CLOSING_WAITTIME = "sjtumaster.kafka.closing.waittime";
 
     // used for mqtt
     public static final String MQTT_CONNECT_TIMEOUT = "sjtumaster.mqtt.connect.timeout";

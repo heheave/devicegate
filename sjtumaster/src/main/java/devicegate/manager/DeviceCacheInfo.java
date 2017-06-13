@@ -83,6 +83,7 @@ public class DeviceCacheInfo {
         if (jo.containsKey(JsonField.DeviceValue.PASSWD)) {
             jo.remove(JsonField.DeviceValue.PASSWD);
         }
+        jo.put(JsonField.DeviceValue.PTIMESTAMP, System.currentTimeMillis());
         for (Map.Entry<Object, Object> entry: getProp().entrySet()) {
             jo.put(entry.getKey(), entry.getValue());
         }

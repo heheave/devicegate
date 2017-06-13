@@ -24,6 +24,7 @@ public class JsonField {
         public static final String LOC = "loc";
         public static final String PORTNUM = "portnum";
         public static final String DTIMESTAMP = "dtimestamp";
+        public static final String PTIMESTAMP = "ptimestamp";
         public static final String MTYPE = "mtype";
         public static final String VALUES = "values";
 

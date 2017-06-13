@@ -8,7 +8,7 @@ import net.sf.json.JSONObject;
 public interface Device {
 
     enum TYPE {
-        SWITCH, DIGITAL, ANALOG
+        SWITCH, DIGITL, ANALOG
     }
 
     String id();

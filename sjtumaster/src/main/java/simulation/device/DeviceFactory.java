@@ -2,7 +2,6 @@ package simulation.device;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * Created by xiaoke on 17-5-15.
@@ -22,7 +21,7 @@ public class DeviceFactory {
             case SWITCH:
                 device = new SwitchDevice(actualId, portNum);
                 break;
-            case DIGITAL:
+            case DIGITL:
                 device = new DigitalDevice(actualId, portNum);
                 break;
             default:
@@ -38,7 +37,7 @@ public class DeviceFactory {
             case SWITCH:
                 actualId = SWITCH_MAGIC_STRING + "-" + "ABC001";
                 break;
-            case DIGITAL:
+            case DIGITL:
                 actualId = DIGITAL_MAGIC_STRING + "-" + "ABC002";
                 break;
             default:

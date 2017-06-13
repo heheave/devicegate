@@ -6,12 +6,14 @@ import devicegate.actor.message.MessageFactory;
 import devicegate.actor.message.Msg;
 import devicegate.actor.message.TellMeMessage;
 import devicegate.conf.Configure;
+import devicegate.conf.JsonField;
 import devicegate.conf.V;
 import devicegate.kafka.KafkaSender;
 import devicegate.manager.DeviceCacheInfo;
 import devicegate.manager.DeviceManager;
 import devicegate.mqtt.MqttProxyClient;
 import devicegate.netty.SlaveNettyServer;
+import devicegate.security.KafkaSendPermission;
 import io.netty.channel.Channel;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -185,6 +187,12 @@ public class SlaveLaunch implements Launch{
 
 
     public void pushToKafka(JSONObject jo) {
+        SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            String did = jo.getString(JsonField.DeviceValue.ID);
+            String mtype = jo.getString(JsonField.DeviceValue.MTYPE);
+            sm.checkPermission(new KafkaSendPermission(mtype, did, "send"));
+        }
         if (!kafkaSender.msgIn(jo)) {
             log.warn("Message: " + jo.toString() + " hasn't push to kafka, because of full queue and 'fullDrop' enabled");
         }
