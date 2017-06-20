@@ -1,58 +1,14 @@
 package devicegate.manager;
 
-import devicegate.actor.MasterActor;
-import devicegate.actor.message.MessageFactory;
-import devicegate.actor.message.Msg;
 import org.apache.log4j.Logger;
 
-import java.io.*;
 import java.net.InetSocketAddress;
 import java.util.*;
 
 /**
  * Created by xiaoke on 17-5-16.
  */
-
-class DI {
-
-    private final InetSocketAddress isa;
-
-    private final String ptc;
-
-    public DI(InetSocketAddress isa, String ptc) {
-        this.isa = isa;
-        this.ptc = ptc;
-    }
-
-    public InetSocketAddress getIsa() {
-        return isa;
-    }
-
-    public String getPtc() {
-        return ptc;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        DI di = (DI) o;
-
-        if (isa != null ? !isa.equals(di.isa) : di.isa != null) return false;
-        return ptc != null ? ptc.equals(di.ptc) : di.ptc == null;
-
-    }
-
-    @Override
-    public int hashCode() {
-        int result = isa != null ? isa.hashCode() : 0;
-        result = 31 * result + (ptc != null ? ptc.hashCode() : 0);
-        return result;
-    }
-}
-
-public class MachineManager extends AbstactManager<String, DI>{
+public class MachineManager extends AbstactManager<String, MachineCacheInfo>{
 
     private static class TimeVersion {
 
@@ -183,13 +139,13 @@ public class MachineManager extends AbstactManager<String, DI>{
 
     public void update(String id, InetSocketAddress inetAddr, String ptc) {
         updateAddress(inetAddr);
-        put(id, new DI(inetAddr, ptc));
+        put(id, new MachineCacheInfo(inetAddr, ptc));
     }
 
     public void remove(String id, InetSocketAddress inetAddr) {
-        DI di = idToCacheObj.get(id);
+        MachineCacheInfo di = idToCacheObj.get(id);
         if (di != null && di.getIsa().equals(inetAddr)) {
-            DI newDi = new DI(inetAddr, di.getPtc());
+            MachineCacheInfo newDi = new MachineCacheInfo(inetAddr, di.getPtc());
             if (idToCacheObj.remove(id, newDi)) {
                 afterRemoved(di);
             }
@@ -227,7 +183,7 @@ public class MachineManager extends AbstactManager<String, DI>{
             }
         }
 
-        for (Map.Entry<String, DI> entry : idToCacheObj.entrySet()) {
+        for (Map.Entry<String, MachineCacheInfo> entry : idToCacheObj.entrySet()) {
             if (entry.getValue() != null) {
                 InetSocketAddress isa = entry.getValue().getIsa();
                 if (isa != null) {
@@ -250,7 +206,7 @@ public class MachineManager extends AbstactManager<String, DI>{
         // ConcurrentHashMap doesn't neet synchronized
         // however entry.value may be null under concurrency condition
         List<String> toRemoveKeys = new LinkedList<String>();
-        for (Map.Entry<String, DI> entry : idToCacheObj.entrySet()) {
+        for (Map.Entry<String, MachineCacheInfo> entry : idToCacheObj.entrySet()) {
             if (entry.getValue() != null && inetAddr.equals(entry.getValue().getIsa())) {
                 toRemoveKeys.add(entry.getKey());
             }
@@ -262,7 +218,7 @@ public class MachineManager extends AbstactManager<String, DI>{
     }
 
     @Override
-    void afterRemoved(DI oldValue) {
+    void afterRemoved(MachineCacheInfo oldValue) {
         InetSocketAddress addr = oldValue.getIsa();
         if (addr != null) {
             log.info("Channel to " + addr.getAddress().getHostAddress() + ":" + addr.getPort() + " is removed");

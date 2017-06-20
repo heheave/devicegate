@@ -12,12 +12,12 @@ import org.apache.log4j.Logger;
 /**
  * Created by xiaoke on 17-5-7.
  */
-public class OutEncoderHandler extends ChannelOutboundHandlerAdapter {
+public class SlaveOutEncoderHandler extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         String outStr = (String)msg;
-        System.out.println(outStr.getClass().getName());
+        //System.out.println(outStr.getClass().getName());
         ByteBuf byteBuf = Unpooled.buffer();
         byteBuf.writeInt(outStr.length());
         byteBuf.writeBytes(outStr.getBytes());

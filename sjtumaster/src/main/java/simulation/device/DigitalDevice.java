@@ -1,11 +1,12 @@
 package simulation.device;
 
 import simulation.DeviceValue.IntegerDeviceValue;
+import simulation.view.DeviceInstance;
 
 /**
  * Created by xiaoke on 17-5-15.
  */
-public class DigitalDevice extends AbstracMonitorDevice<IntegerDeviceValue> {
+public class DigitalDevice extends DeviceInstance<IntegerDeviceValue> {
 
     public DigitalDevice(String id, String type, String desc, String company, Location location, long dtimestamp, int portNum) {
         super(id, type, desc, company, location, dtimestamp, portNum);

@@ -36,24 +36,30 @@ public class KafkaSender {
     private final Runnable run = new Runnable() {
         public void run() {
             final String topic = conf.getStringOrElse(V.KAFKA_PUSH_TOPIC, "devicegate-topic");
+            final Callback callback = new Callback() {
+                public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+                    if (recordMetadata != null) {
+                        log.info("Msg send: offset=" + recordMetadata.offset() + ", partition=" + recordMetadata.partition());
+                    } else {
+                        e.printStackTrace();
+                        log.info("Kafka send error", e);
+                    }
+                }
+            };
             while(isRunning) {
                 try {
                     final Serializable msg = msgQueue.take();
                     if (msg != null) {
                         log.info("Sending info is: " + msg.toString());
                         final ProducerRecord<String, String> record = new ProducerRecord<String, String>(topic, msg.toString());
-                        producer.send(record, new Callback() {
-                            public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-                                if (recordMetadata != null) {
-                                    log.info("Msg send: offset=" + recordMetadata.offset() + ", partition=" + recordMetadata.partition());
-                                } else {
-                                    log.info("Kafka send error", e);
-                                }
-                            }
-                        });
+                        producer.send(record, callback);
                     }
                 } catch (InterruptedException e) {
+                    e.printStackTrace();
                     log.warn("Take msg from msgQueue error: " + e);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    log.error("Very important error: ", e);
                 }
             }
         }
@@ -68,6 +74,7 @@ public class KafkaSender {
         String brokerList = conf.getStringOrElse(V.KAFKA_BROKER_LIST, BROKER_LIST);
         this.producerPropertis = new Properties();
         this.producerPropertis.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList);
+        // this.producerPropertis.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, 0);
         this.producerPropertis.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         this.producerPropertis.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
     }

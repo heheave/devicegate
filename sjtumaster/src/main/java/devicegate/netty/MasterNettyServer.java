@@ -2,6 +2,7 @@ package devicegate.netty;
 
 import devicegate.conf.Configure;
 import devicegate.conf.V;
+import devicegate.launch.MasterLaunch;
 import devicegate.launch.SlaveLaunch;
 import devicegate.netty.handler.MasterHTTPHandler;
 import devicegate.netty.handler.ShowHandler;
@@ -38,12 +39,15 @@ public class MasterNettyServer {
 
     private final InetSocketAddress bindAddress;
 
+    private final MasterLaunch master;
+
     private volatile boolean isRunning;
 
-    public MasterNettyServer(Configure conf) {
+    public MasterNettyServer(MasterLaunch master) {
         this.bossGroup = new NioEventLoopGroup();
         this.workGroup = new NioEventLoopGroup();
-        this.conf = conf;
+        this.master = master;
+        this.conf = master.getConf();
         String localHost = conf.getString(V.MASTER_HOST);
         int localPort = conf.getIntOrElse(V.NETTY_MASTER_SERVER_PORT, 9090);
         this.bindAddress = new InetSocketAddress(localHost, localPort);
@@ -60,14 +64,13 @@ public class MasterNettyServer {
                     .channel(NioServerSocketChannel.class)
                     .option(ChannelOption.SO_BACKLOG, SO_BACKLOG)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
-
                         @Override
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             socketChannel.pipeline().addLast("http-decoder", new HttpRequestDecoder());
                             socketChannel.pipeline().addLast("http-aggregator", new HttpObjectAggregator(HOAMaxCntLength));
                             socketChannel.pipeline().addLast("http-encoder", new HttpResponseEncoder());
                             socketChannel.pipeline().addLast("http-chunked", new ChunkedWriteHandler());
-                            socketChannel.pipeline().addLast("http-handler", new MasterHTTPHandler());
+                            socketChannel.pipeline().addLast("http-handler", new MasterHTTPHandler(master));
                         }
                     });
             ChannelFuture future = bootstrap.bind(bindAddress).sync();

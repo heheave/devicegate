@@ -11,6 +11,8 @@ public class JsonField {
         public static final String HOST = "addr";
         public static final String PROT = "port";
         public static final String PTC = "ptc";
+        public static final String ISRET = "ret";
+        public static final String ACKINFO = "ackinfo";
     }
 
     public static final class DeviceValue {
@@ -31,5 +33,34 @@ public class JsonField {
         public static final String VALID="valid";
         public static final String UNIT ="unit";
         public static final String VALUE="value";
+    }
+
+    public static final class DeviceCtrl {
+        public static final String ID = "did";
+        public static final String TYPE = "type";
+        public static final String MODE = "mode";
+        public static final String PORT = "port";
+        public static final String VALUE = "value";
+
+        public static final String RET = "stat";
+
+        public enum CtrlState{
+
+            DID_NULL("did is null"),
+            CTRL_SUCCEEDED("ctrl succeeded"),
+            CTRL_FAILED("ctrl failed"),
+            NO_DEVICE("no device info"),
+            UNCERTAIN("ctrl result uncertain");
+
+            private String desc;
+
+            CtrlState(String desc) {
+                this.desc = desc;
+            }
+
+            public String desc() {
+                return desc;
+            }
+        }
     }
 }

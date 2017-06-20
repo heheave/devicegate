@@ -6,6 +6,7 @@ import akka.util.Timeout;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import devicegate.actor.message.AckMessage;
+import devicegate.actor.message.Msg;
 import devicegate.conf.Configure;
 import devicegate.conf.V;
 import devicegate.launch.SlaveLaunch;
@@ -45,17 +46,18 @@ public class SlaveActor extends AbstractAkkaActor{
         remoteActor.tell(msg, actorRef);
     }
 
-    public void sendToMasterWithReply(Object msg)  throws Exception {
+    public Object sendToMasterWithReply(Msg msg)  throws Exception {
         long contTimeOut = conf.getLongOrElse(V.ACTOR_REPLY_TIMEOUT, 2000);
-        sendToMasterWithReply(msg, contTimeOut);
+        return sendToMasterWithReply(msg, contTimeOut);
     }
 
-    public void sendToMasterWithReply(Object msg, long timeOut) throws Exception {
+    public Object sendToMasterWithReply(Msg msg, long timeOut) throws Exception {
+        msg.setRet(true);
         String slaveActorPath = getRemoteActorPath(null);
         ActorSelection remoteActor = system.actorSelection(slaveActorPath);
         Timeout timeout = Timeout.longToTimeout(timeOut);
         Future<Object> future = Patterns.ask(remoteActor, msg, timeout);
-        Await.result(future, timeout.duration());
+        return Await.result(future, timeout.duration());
     }
 
 

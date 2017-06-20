@@ -1,5 +1,7 @@
 package simulation.device;
 
+import simulation.view.DeviceInstance;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -14,8 +16,8 @@ public class DeviceFactory {
 
     private static final Set<String> deviceIds = new HashSet<String>();
 
-    public static AbstracMonitorDevice getMonitorDevice(Device.TYPE deviceType, int portNum) {
-        AbstracMonitorDevice device = null;
+    public static DeviceInstance getMonitorDevice(Device.TYPE deviceType, int portNum) {
+        DeviceInstance device = null;
         String actualId = getLegalId(deviceType);
         switch (deviceType) {
             case SWITCH:

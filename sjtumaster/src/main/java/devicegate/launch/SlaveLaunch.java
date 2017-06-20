@@ -42,7 +42,7 @@ public class SlaveLaunch implements Launch{
 
     private final SlaveNettyServer nettyServer;
 
-    private final MqttProxyClient mqttSubcriber;
+    private final MqttProxyClient mqttProxyClient;
 
     private final DeviceManager dm;
 
@@ -57,7 +57,7 @@ public class SlaveLaunch implements Launch{
     public SlaveLaunch(Configure conf) {
         this.conf = conf;
         this.nettyServer = new SlaveNettyServer(this, conf);
-        this.mqttSubcriber = new MqttProxyClient(this, conf);
+        this.mqttProxyClient = new MqttProxyClient(this, conf);
         this.dm = DeviceManager.getInstance();
         this.slaveActor = new SlaveActor(conf, this);
         this.kafkaSender = new KafkaSender(conf);
@@ -74,12 +74,16 @@ public class SlaveLaunch implements Launch{
         return dm;
     }
 
+    public MqttProxyClient getMqttProxyClient() {
+        return mqttProxyClient;
+    }
+
     public void launch() throws Exception{
         if (state.compareAndSet(0, 1)) {
             kafkaSender.start();
             slaveActor.start();
             nettyServer.start();
-            mqttSubcriber.start();
+            mqttProxyClient.start();
             Msg msg = MessageFactory.getMessage(Msg.TYPE.STASLV);
             msg.setAddress(slaveActor.systemAddress());
             //slaveActor.sendToMaster(msg);
@@ -105,7 +109,7 @@ public class SlaveLaunch implements Launch{
                 }
             }
             nettyServer.stop();
-            mqttSubcriber.stop();
+            mqttProxyClient.stop();
             slaveActor.stop();
             kafkaSender.stop();
             if (retry) {
@@ -132,7 +136,7 @@ public class SlaveLaunch implements Launch{
         // added to remote manager
         AddIdMessage msg = (AddIdMessage)MessageFactory.getMessage(Msg.TYPE.ADDID);
         msg.setId(id);
-        msg.setProtocol(channel == null ? "MQTT": "TCP");
+        msg.setProtocol(di.protocol().name());
         msg.setAddress(slaveActor.systemAddress());
         slaveActor.sendToRemote(msg, null);
             // bind id to channel

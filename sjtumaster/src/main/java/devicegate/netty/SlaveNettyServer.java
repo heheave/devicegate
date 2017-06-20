@@ -2,10 +2,9 @@ package devicegate.netty;
 
 import devicegate.conf.Configure;
 import devicegate.conf.V;
-import devicegate.netty.handler.OutEncoderHandler;
+import devicegate.netty.handler.SlaveOutEncoderHandler;
 import devicegate.netty.handler.SlaveInDecoderHandler;
 import devicegate.netty.handler.SlaveMessageHandler;
-import devicegate.netty.handler.ShowHandler;
 import devicegate.launch.SlaveLaunch;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -17,7 +16,6 @@ import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
-import java.util.List;
 
 /**
  * Created by xiaoke on 17-5-16.
@@ -63,7 +61,7 @@ public class SlaveNettyServer {
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             socketChannel.pipeline().addLast(new SlaveInDecoderHandler());
                             socketChannel.pipeline().addLast(new SlaveMessageHandler(belongsToLaunch));
-                            socketChannel.pipeline().addLast(new OutEncoderHandler());
+                            socketChannel.pipeline().addLast(new SlaveOutEncoderHandler());
                         }
                     });
             ChannelFuture future = bootstrap.bind(bindAddress).sync();

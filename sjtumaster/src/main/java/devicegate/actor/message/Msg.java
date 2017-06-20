@@ -14,7 +14,7 @@ import java.util.Map;
 public abstract class Msg implements Serializable{
 
     public enum TYPE {
-        HB, ACK, TELLME, ADDID, RMID, STASLV, STPSLV
+        HB, ACK, TELLME, ADDID, RMID, STASLV, STPSLV, CTRL
     }
 
     protected final TYPE type;
@@ -92,6 +92,18 @@ public abstract class Msg implements Serializable{
             return new InetSocketAddress(host, port);
         } else {
             return null;
+        }
+    }
+
+    public void setRet(boolean isRet) {
+        data.put(JsonField.MSG.ISRET, isRet);
+    }
+
+    public boolean isRet() {
+        if (data.containsKey(JsonField.MSG.ISRET)) {
+            return data.getBoolean(JsonField.MSG.ISRET);
+        } else {
+            return false;
         }
     }
 }

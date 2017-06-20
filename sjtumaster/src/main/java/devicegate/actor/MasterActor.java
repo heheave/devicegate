@@ -1,10 +1,15 @@
 package devicegate.actor;
 
 import akka.actor.*;
+import akka.pattern.Patterns;
+import akka.util.Timeout;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import devicegate.actor.message.Msg;
 import devicegate.conf.Configure;
 import devicegate.conf.V;
+import scala.concurrent.Await;
+import scala.concurrent.Future;
 
 import java.io.File;
 import java.net.InetSocketAddress;
@@ -30,6 +35,20 @@ public class MasterActor extends AbstractAkkaActor {
         String slaveActorPath = getRemoteActorPath(hostAddr);
         ActorSelection remoteActor = system.actorSelection(slaveActorPath);
         remoteActor.tell(msg, actorRef);
+    }
+
+    public Object sendToSlaveWithReply(Msg msg, InetSocketAddress hostAddr)  throws Exception {
+        long contTimeOut = conf.getLongOrElse(V.ACTOR_REPLY_TIMEOUT, 2000);
+        return sendToSlaveWithReply(msg, hostAddr, contTimeOut);
+    }
+
+    public Object sendToSlaveWithReply(Msg msg, InetSocketAddress hostAddr, long timeOut) throws Exception {
+        msg.setRet(true);
+        String slaveActorPath = getRemoteActorPath(hostAddr);
+        ActorSelection remoteActor = system.actorSelection(slaveActorPath);
+        Timeout timeout = Timeout.longToTimeout(timeOut);
+        Future<Object> future = Patterns.ask(remoteActor, msg, timeout);
+        return Await.result(future, timeout.duration());
     }
 
     public void start() {

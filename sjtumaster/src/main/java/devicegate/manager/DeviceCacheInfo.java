@@ -13,12 +13,15 @@ import java.util.Properties;
  */
 public class DeviceCacheInfo {
 
+    public enum Protocol {
+        TCP, MQTT
+    }
     // 0 is tcp
     // 1 is mqtt
 
     private final String did;
 
-    private final int protocolType;
+    private final Protocol protocolType;
 
     private final long period;
 
@@ -33,11 +36,11 @@ public class DeviceCacheInfo {
         this.channel = channel;
         this.period = period;
         this.timeversion = System.currentTimeMillis() + period;
-        this.protocolType = (channel == null) ? 1 : 0;
+        this.protocolType = (channel == null) ? Protocol.MQTT : Protocol.TCP;
         this.prop = new Properties();
     }
 
-    public int protocol() {
+    public Protocol protocol() {
         return protocolType;
     }
 

@@ -44,8 +44,17 @@ public class V {
     public static final String KAFKA_QUEUE_COMPACITY = "sjtumaster.kafka.queue.compacity";
     public static final String KAFKA_FULL_DROP = "sjtumaster.kafka.full.drop";
     public static final String KAFKA_PUSH_TOPIC = "sjtumaster.kafka.push.topic";
+    public static final String KAFKA_CTRL_TOPIC = "sjtumaster.kafka.ctrl.topic";
+    public static final String KAFKA_ZK_LIST = "sjtumaster.kafka.zk.list";
     public static final String KAFKA_BROKER_LIST = "sjtumater.kafka.broker.list";
     public static final String KAFKA_CLOSING_WAITTIME = "sjtumaster.kafka.closing.waittime";
+    public static final String KAFKA_GROUP_ID = "sjtumaster.kafka.group.id";
+    public static final String KAFKA_ZK_SESSION_TIMEOUT = "sjtumaster.kafka.dislock.session.timeout";
+    public static final String KAFKA_AUTO_OFFSET_RESET = "sjtumaster.auto.offset.reset";
+    public static final String KAFKA_ZK_SYNC_TIME = "sjtumaster.kafka.dislock.sync.time";
+    public static final String KAFKA_REBALANCE_MAX_RETRIES = "sjtumaster.kafka.rebalance.max.retries";
+    public static final String KAFKA_REBALANCE_BACKOFF = "sjtumaster.kafka.rebalance.backoff";
+    public static final String KAFKA_AUTO_COMMIT_INTERVAL = "sjtumaster.auto.commit.interval";
 
     // used for mqtt
     public static final String MQTT_CONNECT_TIMEOUT = "sjtumaster.mqtt.connect.timeout";
