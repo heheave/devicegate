@@ -9,6 +9,8 @@ import io.netty.channel.ChannelFutureListener;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
+import java.security.AccessControlException;
+
 /**
  * Created by xiaoke on 17-5-18.
  */
@@ -76,7 +78,12 @@ public class MqttMessageHandler implements MqttHandler{
                         if (dci != null) {
                             log.info("session found");
                             dci.updateTime();
-                            slaveLaunch.pushToKafka(dci.decorateJson(jo));
+                            try {
+                                slaveLaunch.pushToKafka(dci.decorateJson(jo));
+                            } catch (AccessControlException e) {
+                                client.pub(String.format(topicFormat, did), conf.getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH"));
+                                slaveLaunch.removeChannel(did);
+                            }
                         } else {
                             log.info("session not found");
                             client.pub(String.format(topicFormat, did), conf.getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH"));

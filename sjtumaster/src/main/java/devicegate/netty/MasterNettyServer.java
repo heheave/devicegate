@@ -3,11 +3,7 @@ package devicegate.netty;
 import devicegate.conf.Configure;
 import devicegate.conf.V;
 import devicegate.launch.MasterLaunch;
-import devicegate.launch.SlaveLaunch;
 import devicegate.netty.handler.MasterHTTPHandler;
-import devicegate.netty.handler.ShowHandler;
-import devicegate.netty.handler.SlaveInDecoderHandler;
-import devicegate.netty.handler.SlaveMessageHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -22,7 +18,6 @@ import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
-import java.util.List;
 
 /**
  * Created by xiaoke on 17-5-16.
@@ -56,7 +51,7 @@ public class MasterNettyServer {
 
     public void start() {
         isRunning = true;
-        final int HOAMaxCntLength = conf.getIntOrElse(V.MASTER_HOA_MAX_CONTEN_LENGTH, 65536);
+        final int HOAMaxCntLength = conf.getIntOrElse(V.MASTER_HOA_MAX_CONTENT_LENGTH, 65536);
         try {
             int SO_BACKLOG = conf.getIntOrElse(V.NETTY_SERVER_SO_BACKLOG, 100);
             ServerBootstrap bootstrap = new ServerBootstrap();

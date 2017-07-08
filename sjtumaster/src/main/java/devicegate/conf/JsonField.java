@@ -41,6 +41,7 @@ public class JsonField {
         public static final String MODE = "mode";
         public static final String PORT = "port";
         public static final String VALUE = "value";
+        public static final String MAGIC = "magic";
 
         public static final String RET = "stat";
 

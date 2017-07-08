@@ -74,7 +74,7 @@ public class MqttProxyClient {
     public void start() throws Exception {
         this.isRunning = true;
         String mqttServerUrl = String.format("tcp://%s:%d", subAddress.getAddress().getHostAddress(), subAddress.getPort());
-        log.info("subsubsub: " + mqttServerUrl);
+        log.info("MQTT proxy client is started: " + mqttServerUrl);
         final String mqttClientId = conf.getStringOrElse(V.MQTT_CLIENT_ID, UUID.randomUUID().toString());
         try {
             client = new MqttClient(mqttServerUrl, mqttClientId, new MemoryPersistence());
@@ -104,7 +104,7 @@ public class MqttProxyClient {
             }
 
             public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
-                log.warn("MQTT delivery complete");
+                log.info("MQTT delivery complete");
             }
         });
         log.info(subTopic);
@@ -153,7 +153,7 @@ public class MqttProxyClient {
             return;
         }
         log.info("Start reconnect and resubscribe runner");
-        final long sleepIfFailed = conf.getLongOrElse(V.MQTT_RECONNECT_PERIOD, 5000);
+        final long sleepIfFailed = conf.getLongOrElse(V.MQTT_SLEEP_IF_FAILED, 5000);
         Runnable run = new Runnable() {
             public void run() {
                 // 0 is not connect
@@ -162,6 +162,7 @@ public class MqttProxyClient {
                 isRec = true;
                 int recState = client.isConnected() ? 1 : 0;
                 while (recState != 2) {
+                    log.info("client reconnect state: " + recState);
                     if (recState == 0) {
                         try {
                             client.connect(defaultOpt);
@@ -205,6 +206,7 @@ public class MqttProxyClient {
         isRunning = false;
         if (client != null) {
             try {
+                client.setTimeToWait(conf.getLongOrElse(V.MQTT_TIME_TO_WAIT, 4000));
                 if (!isRec) {
                     log.info("MQTT stop first unsubscribe");
                     client.unsubscribe(subTopic);

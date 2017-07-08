@@ -14,6 +14,7 @@ import io.netty.channel.ChannelPromise;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
+import java.security.AccessControlException;
 import java.util.Map;
 import java.util.Set;
 
@@ -47,11 +48,12 @@ public class SlaveMessageHandler extends ChannelInboundHandlerAdapter {
             if (cnt) {
                 log.info("cnt message");
                 // required cnt and has already existed
-                boolean checked = false;
+                boolean checked;
                 if (dci != null) {
                     log.info("cnt existed");
                     dci.updateTime();
                     dci.bindWithJson(jo);
+                    checked = true;
                 } else {
                     // required cnt but not existed, do cnt
                     //check user and passwd
@@ -78,7 +80,11 @@ public class SlaveMessageHandler extends ChannelInboundHandlerAdapter {
                 if (dci != null) {
                     log.info("session found");
                     dci.updateTime();
-                    slaveLaunch.pushToKafka(dci.decorateJson(jo));
+                    try {
+                        slaveLaunch.pushToKafka(dci.decorateJson(jo));
+                    } catch (AccessControlException e) {
+                        ctx.channel().writeAndFlush(conf.getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH")).addListener(ChannelFutureListener.CLOSE);
+                    }
                 } else {
                     log.info("session not found");
                     ctx.channel().writeAndFlush(conf.getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH")).addListener(ChannelFutureListener.CLOSE);
@@ -94,6 +100,7 @@ public class SlaveMessageHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        //log.info("Channel is stopped");
         slaveLaunch.removeChannel(ctx.channel());
     }
 }

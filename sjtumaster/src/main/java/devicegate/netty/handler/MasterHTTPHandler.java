@@ -83,7 +83,7 @@ public class MasterHTTPHandler extends SimpleChannelInboundHandler<FullHttpReque
                 responseCtrl(cntx, retTuple);
             }
         } else {
-            sendError(cntx, HttpResponseStatus.FORBIDDEN);
+            sendError(cntx, HttpResponseStatus.METHOD_NOT_ALLOWED);
         }
     }
 

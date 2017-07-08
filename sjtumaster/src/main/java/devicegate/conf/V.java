@@ -26,7 +26,7 @@ public class V {
     public static final String NETTY_SERVER_SO_BACKLOG = "sjtumaster.netty.server.sobacklog";
     public static final String NETTY_MASTER_SERVER_PORT = "sjtumaster.netty.master.port";
     public static final String NETTY_SLAVE_SERVER_PORT= "sjtumaster.netty.slave.port";
-    public static final String MASTER_HOA_MAX_CONTEN_LENGTH = "sjtumaster.hop.max.content.length";
+    public static final String MASTER_HOA_MAX_CONTENT_LENGTH = "sjtumaster.hop.max.content.length";
 
     // used for actor
     public static final String ACTOR_MASTER_SYSTEM_NAME = "sjtumaster.master.system.name";
@@ -59,8 +59,12 @@ public class V {
     // used for mqtt
     public static final String MQTT_CONNECT_TIMEOUT = "sjtumaster.mqtt.connect.timeout";
     public static final String MQTT_KEEPALIVE_INTERVAL = "sjtumaster.mqtt.keepalive.interval";
-    public static final String MQTT_RECONNECT_PERIOD = "sjtumaster.mqtt.reconnect.period";
+    public static final String MQTT_SLEEP_IF_FAILED = "sjtumaster.mqtt.sleep.if.failed";
+    public static final String MQTT_TIME_TO_WAIT = "sjtumaster.mqtt.time.to.wait";
     public static final String MQTT_PUB_QUEUE_SIZE = "sjtumaster.mqtt.pub.queue.size";
     public static final String MQTT_CLIENT_ID = "sjtumaster.mqtt.client.id";
     public static final String MQTT_SUB_TOPIC = "sjtumaster.mqtt.sub.topic";
+
+    // used for controller
+    public static final String CTRL_QUEUE_COMPACITY = "sjtumaster.ctrl.queue.compacity";
 }

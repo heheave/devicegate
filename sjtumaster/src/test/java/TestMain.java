@@ -32,21 +32,22 @@ public class TestMain {
             //jo.put("query", "select * from deviceValue where did = 'DIGITL-ABC002' and ptimestamp % 1000000 < 1000");
             //int a = 1000000;
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH");
-            long btime = -1;
-            long etime = -1;
-            try {
-                btime = sdf.parse("2017-06-18 19").getTime();
-                etime = sdf.parse("2017-06-18 21").getTime();
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-            jo.put("btime", btime);
-            jo.put("etime", etime);
-            System.out.println(etime - btime);
-            System.out.println((etime - btime) / 10);
-            jo.put("interval", (etime - btime) / 15);
-            jo.put("delta", 15 * 1000);
+//            long btime = -1;
+//            long etime = -1;
+//            try {
+//                btime = sdf.parse("2017-06-23 10").getTime();
+//                etime = sdf.parse("2017-06-23 12").getTime();
+//            } catch (ParseException e) {
+//                e.printStackTrace();
+//            }
+//            jo.put("btime", btime);
+//            jo.put("etime", etime);
+//            System.out.println(etime - btime);
+//            System.out.println((etime - btime) / 10);
+//            jo.put("interval", (etime - btime) / 1000);
+//            jo.put("delta", 15 * 1000);
             //jo.getInt("interval");
+            jo.put("desc", "pm2.5");
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
             byte[] write = jo.toString().getBytes();
             dos.write(write, 0, write.length);

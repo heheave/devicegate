@@ -8,6 +8,7 @@ import devicegate.actor.message.TellMeMessage;
 import devicegate.conf.Configure;
 import devicegate.conf.JsonField;
 import devicegate.conf.V;
+import devicegate.ctrl.Controller;
 import devicegate.kafka.KafkaSender;
 import devicegate.manager.DeviceCacheInfo;
 import devicegate.manager.DeviceManager;
@@ -50,6 +51,8 @@ public class SlaveLaunch implements Launch{
 
     private final KafkaSender kafkaSender;
 
+    private final Controller controller;
+
     private final Lock hbLocks;
 
     private final Condition hbAckCon;
@@ -61,6 +64,7 @@ public class SlaveLaunch implements Launch{
         this.dm = DeviceManager.getInstance();
         this.slaveActor = new SlaveActor(conf, this);
         this.kafkaSender = new KafkaSender(conf);
+        this.controller = new Controller(this, conf);
         this.hbLocks = new ReentrantLock();
         this.hbAckCon = this.hbLocks.newCondition();
         this.state = new AtomicInteger(0);
@@ -78,12 +82,17 @@ public class SlaveLaunch implements Launch{
         return mqttProxyClient;
     }
 
+    public Controller getController() {
+        return controller;
+    }
+
     public void launch() throws Exception{
         if (state.compareAndSet(0, 1)) {
             kafkaSender.start();
             slaveActor.start();
             nettyServer.start();
             mqttProxyClient.start();
+            controller.start();
             Msg msg = MessageFactory.getMessage(Msg.TYPE.STASLV);
             msg.setAddress(slaveActor.systemAddress());
             //slaveActor.sendToMaster(msg);
@@ -108,6 +117,7 @@ public class SlaveLaunch implements Launch{
                     log.info("After stop other parts, we'll retry it");
                 }
             }
+            controller.stop();
             nettyServer.stop();
             mqttProxyClient.stop();
             slaveActor.stop();

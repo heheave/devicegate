@@ -21,8 +21,8 @@ public class DeviceManager extends AbstactManager<String, DeviceCacheInfo>{
 
     @Override
     void afterRemoved(DeviceCacheInfo oldValue) {
-        if (oldValue != null && oldValue.getChannel() != null) {
-            Channel channel =  oldValue.getChannel();
+        Channel channel;
+        if (oldValue != null && (channel = oldValue.getChannel()) != null) {
             Attribute<String> attr = channel.attr(AttributeKey.<String>valueOf(V.NETTY_CHANNEL_ATTR_KEY));
             if (attr != null) {
                 attr.setIfAbsent(null);
