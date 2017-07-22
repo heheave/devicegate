@@ -61,7 +61,7 @@ public class SlaveLaunch implements Launch{
         this.conf = conf;
         this.nettyServer = new SlaveNettyServer(this, conf);
         this.mqttProxyClient = new MqttProxyClient(this, conf);
-        this.dm = DeviceManager.getInstance();
+        this.dm = DeviceManager.getInstance(this);
         this.slaveActor = new SlaveActor(conf, this);
         this.kafkaSender = new KafkaSender(conf);
         this.controller = new Controller(this, conf);
@@ -86,12 +86,20 @@ public class SlaveLaunch implements Launch{
         return controller;
     }
 
+    public SlaveActor getActor() {
+        return slaveActor;
+    }
+
+    public KafkaSender getKafkaSender() {
+        return kafkaSender;
+    }
+
     public void launch() throws Exception{
         if (state.compareAndSet(0, 1)) {
             kafkaSender.start();
             slaveActor.start();
             nettyServer.start();
-            mqttProxyClient.start();
+            //mqttProxyClient.start();
             controller.start();
             Msg msg = MessageFactory.getMessage(Msg.TYPE.STASLV);
             msg.setAddress(slaveActor.systemAddress());
@@ -139,110 +147,6 @@ public class SlaveLaunch implements Launch{
         return state.get();
     }
 
-    public DeviceCacheInfo addChannel(String id, Channel channel) {
-        // added to local manager
-        DeviceCacheInfo di = new DeviceCacheInfo(id, channel, conf.getLongOrElse(V.SLAVE_SESSION_TIMEOUT, 30000));
-        dm.put(id, di);
-        // added to remote manager
-        AddIdMessage msg = (AddIdMessage)MessageFactory.getMessage(Msg.TYPE.ADDID);
-        msg.setId(id);
-        msg.setProtocol(di.protocol().name());
-        msg.setAddress(slaveActor.systemAddress());
-        slaveActor.sendToRemote(msg, null);
-            // bind id to channel
-        if (channel != null) {
-            Attribute<String> attr = channel.attr(AttributeKey.<String>valueOf(V.NETTY_CHANNEL_ATTR_KEY));
-            if (attr != null) {
-                attr.setIfAbsent(id);
-            }
-        }
-        return di;
-    }
-
-    public boolean removeChannel(String id) {
-        return removeChannel(id, null);
-    }
-
-    public boolean removeChannel(Channel channel) {
-        return removeChannel(null, channel);
-    }
-
-    private boolean removeChannel(String id, Channel channel) {
-        if (id == null && channel == null) {
-            return false;
-        } else if (channel == null) {
-            if (dm.remove(id) != null) {
-                // remove from remote
-                Msg msg = MessageFactory.getMessage(Msg.TYPE.RMID);
-                msg.setId(id);
-                msg.setAddress(slaveActor.systemAddress());
-                slaveActor.sendToRemote(msg, null);
-            }
-            return true;
-        } else {
-            //cancel id to channel
-            Attribute<String> attr = channel.attr(AttributeKey.<String>valueOf(V.NETTY_CHANNEL_ATTR_KEY));
-            if (attr != null) {
-                String idAttach = attr.get();
-                if (idAttach != null) {
-                    // remove from local
-                    if (dm.remove(idAttach) != null) {
-                        // remove from remote
-                        Msg msg = MessageFactory.getMessage(Msg.TYPE.RMID);
-                        msg.setId(idAttach);
-                        msg.setAddress(slaveActor.systemAddress());
-                        slaveActor.sendToRemote(msg, null);
-                    }
-                }
-            }
-            return true;
-        }
-    }
-
-
-    public void pushToKafka(JSONObject jo) {
-        SecurityManager sm = System.getSecurityManager();
-        if (sm != null) {
-            String did = jo.getString(JsonField.DeviceValue.ID);
-            String mtype = jo.getString(JsonField.DeviceValue.MTYPE);
-            sm.checkPermission(new KafkaSendPermission(mtype, did, "send"));
-        }
-        if (!kafkaSender.msgIn(jo)) {
-            log.warn("Message: " + jo.toString() + " hasn't push to kafka, because of full queue and 'fullDrop' enabled");
-        }
-    }
-
-    public void tellToMaster() {
-        int maxIds = conf.getIntOrElse(V.ACTOR_TELLME_MAX_IDS, 50);
-        List<String> keys = dm.getAllKeys();
-        if (keys.isEmpty()) return;
-        int keySize = keys.size();
-        int resListNum = keySize % maxIds == 0 ? keySize / maxIds : keySize / maxIds + 1;
-        List<List<String>> res = new ArrayList<List<String>>(resListNum);
-        int full = keySize / resListNum + 1;
-        int cnt = 1;
-        List<String> tmp = new ArrayList<String>(full);
-        for (String key: keys) {
-            if (cnt == full) {
-                res.add(tmp);
-                tmp = new ArrayList<String>(full);
-            } else {
-                tmp.add(key);
-            }
-            cnt++;
-        }
-        if (!tmp.isEmpty()){
-            res.add(tmp);
-        }
-        for (List<String> li : res) {
-            Msg mes = MessageFactory.getMessage(Msg.TYPE.TELLME);
-            mes.setAddress(slaveActor.systemAddress());
-            ((TellMeMessage)mes).setTellInfo(li);
-            slaveActor.sendToRemote(mes, null);
-            li.clear();
-        }
-        res.clear();
-    }
 
     public void heartbeatAckReceived() {
         hbLocks.lock();
@@ -268,7 +172,7 @@ public class SlaveLaunch implements Launch{
                     long currentTime = System.currentTimeMillis();
                     if (lastCleanTime + masterPeriod < currentTime) {
                         lastCleanTime = currentTime;
-                        dm.cleanAll(SlaveLaunch.this, currentTime);
+                        dm.cleanAll(currentTime);
                     }
                     Msg hbMsg = MessageFactory.getMessage(Msg.TYPE.HB);
                     hbMsg.setAddress(slaveActor.systemAddress());
@@ -306,5 +210,4 @@ public class SlaveLaunch implements Launch{
         t.setDaemon(true);
         t.start();
     }
-
 }

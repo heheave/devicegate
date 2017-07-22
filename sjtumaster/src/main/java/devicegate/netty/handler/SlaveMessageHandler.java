@@ -61,7 +61,7 @@ public class SlaveMessageHandler extends ChannelInboundHandlerAdapter {
                     checked = true;
                     if (checked) {
                         log.info("checked");
-                        dci = slaveLaunch.addChannel(id, ctx.channel());
+                        dci = slaveLaunch.getDm().addChannel(id, ctx.channel());
                         if (dci != null) {
                             dci.bindWithJson(jo);
                         }
@@ -81,7 +81,7 @@ public class SlaveMessageHandler extends ChannelInboundHandlerAdapter {
                     log.info("session found");
                     dci.updateTime();
                     try {
-                        slaveLaunch.pushToKafka(dci.decorateJson(jo));
+                        slaveLaunch.getKafkaSender().pushToKafka(dci.decorateJson(jo));
                     } catch (AccessControlException e) {
                         ctx.channel().writeAndFlush(conf.getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH")).addListener(ChannelFutureListener.CLOSE);
                     }
@@ -101,6 +101,6 @@ public class SlaveMessageHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         //log.info("Channel is stopped");
-        slaveLaunch.removeChannel(ctx.channel());
+        slaveLaunch.getDm().removeChannel(ctx.channel());
     }
 }

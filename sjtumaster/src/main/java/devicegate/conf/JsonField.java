@@ -20,6 +20,7 @@ public class JsonField {
         public static final String USER = "user";
         public static final String PASSWD = "passwd";
         public static final String ID = "id";
+        public static final String APP = "app";
         public static final String DTYPE = "dtype";
         public static final String DESC = "desc";
         public static final String COM = "com";

@@ -58,7 +58,7 @@ public class MqttMessageHandler implements MqttHandler{
                             log.info("cnt not existed, check???");
                             checked = true;
                             if (checked) {
-                                dci = slaveLaunch.addChannel(id, null);
+                                dci = slaveLaunch.getDm().addChannel(id, null);
                                 if (dci != null) {
                                     dci.bindWithJson(jo);
                                 }
@@ -79,10 +79,10 @@ public class MqttMessageHandler implements MqttHandler{
                             log.info("session found");
                             dci.updateTime();
                             try {
-                                slaveLaunch.pushToKafka(dci.decorateJson(jo));
+                                slaveLaunch.getKafkaSender().pushToKafka(dci.decorateJson(jo));
                             } catch (AccessControlException e) {
                                 client.pub(String.format(topicFormat, did), conf.getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH"));
-                                slaveLaunch.removeChannel(did);
+                                slaveLaunch.getDm().removeChannel(did);
                             }
                         } else {
                             log.info("session not found");

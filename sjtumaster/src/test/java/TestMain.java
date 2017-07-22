@@ -28,7 +28,7 @@ public class TestMain {
             socket.connect(new InetSocketAddress("localhost", 20000));
             JSONObject jo = new JSONObject();
             jo.put("type", "rdd");
-            jo.put("id", "DIGITL-ABC002");
+            jo.put("id", "DIGITL-ABC010");
             //jo.put("query", "select * from deviceValue where did = 'DIGITL-ABC002' and ptimestamp % 1000000 < 1000");
             //int a = 1000000;
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH");

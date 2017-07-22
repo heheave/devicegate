@@ -14,32 +14,33 @@ public class KafkaSendPermission extends Permission{
      * @param name name of the Permission object being created.
      */
 
-    private static final String SEPARATOR = ":";
+    private final String checkInfo;
 
     private final String action;
 
-    public KafkaSendPermission(String name, String action) {
-        super(name);
-        //System.out.println("name:" + name + ",action: " + action);
+    public KafkaSendPermission(String checkType, String action, String checkInfo) {
+        super(checkType);
         this.action = action;
+        this.checkInfo = checkInfo;
     }
 
-    public KafkaSendPermission(String name, String did, String act) {
-        this(name, String.format("%s%s%s", did, SEPARATOR, act));
+    public KafkaSendPermission(String checkType, String action) {
+        this(checkType, action, null);
+    }
+
+    private boolean check(String checkType, String checkInfo) {
+        return SecurityInfoCache.getInstance().contains(checkType, checkInfo);
     }
 
     @Override
     public boolean implies(Permission permission) {
         if (permission instanceof KafkaSendPermission) {
             KafkaSendPermission ksp = (KafkaSendPermission)permission;
-            String toCheckedName = ksp.getName();
-            //System.out.println(ksp.getName() + ">>" + ksp.getActions());
-            String[] toCheckedAction = ksp.getActions().split(SEPARATOR, 2);
-            //System.out.println(toCheckedName + ">>" + toCheckedAction[0] + ">>" + toCheckedAction[1]);
-            //System.out.println(getName() + ">>" + getActions());
-            return toCheckedName.endsWith(getName())
-                    && toCheckedAction[0].startsWith(getName())
-                    && toCheckedAction[1].equals(action);
+            String kspAction = ksp.action;
+            String checkType = ksp.getName();
+            String checkInfo = ksp.checkInfo;
+            return stringEquals(action, kspAction) && checkType != null
+                    && checkInfo != null && check(checkType, checkInfo);
         } else {
             return false;
         }
@@ -76,6 +77,6 @@ public class KafkaSendPermission extends Permission{
 
     @Override
     public String getActions() {
-        return action;
+        return "Check type: " + action;
     }
 }

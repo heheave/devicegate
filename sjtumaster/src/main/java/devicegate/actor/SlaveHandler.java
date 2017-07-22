@@ -36,7 +36,7 @@ public class SlaveHandler extends UntypedActor {
         if (message instanceof AckMessage) {
             slaveLaunch.heartbeatAckReceived();
         } else if (message instanceof TellMeMessage) {
-            slaveLaunch.tellToMaster();
+            tellToMaster();
         } else if (message instanceof CtrlMessage){
             ctrl((CtrlMessage)message);
         } else {
@@ -55,6 +55,21 @@ public class SlaveHandler extends UntypedActor {
                 }
                 getSender().tell(ackMsg, getSelf());
             }
+        }
+    }
+
+    private void tellToMaster() {
+        List<List<String>> res = slaveLaunch.getDm().getTellMasterToInfo();
+        try {
+            for (List<String> li : res) {
+                Msg mes = MessageFactory.getMessage(Msg.TYPE.TELLME);
+                mes.setAddress(slaveLaunch.getActor().systemAddress());
+                ((TellMeMessage) mes).setTellInfo(li);
+                slaveLaunch.getActor().sendToRemote(mes, null);
+                li.clear();
+            }
+        } finally {
+            res.clear();
         }
     }
 }

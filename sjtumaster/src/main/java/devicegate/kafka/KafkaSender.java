@@ -1,7 +1,11 @@
 package devicegate.kafka;
 
 import devicegate.conf.Configure;
+import devicegate.conf.JsonField;
 import devicegate.conf.V;
+import devicegate.security.KafkaSendPermission;
+import kafka.utils.Json;
+import net.sf.json.JSONObject;
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.log4j.Logger;
@@ -77,6 +81,18 @@ public class KafkaSender {
         // this.producerPropertis.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, 0);
         this.producerPropertis.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         this.producerPropertis.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+    }
+
+    public void pushToKafka(JSONObject jo) {
+        SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            //String did = jo.getString(JsonField.DeviceValue.ID);
+            String app = jo.containsKey(JsonField.DeviceValue.APP) ? jo.getString(JsonField.DeviceValue.APP) : null;
+            sm.checkPermission(new KafkaSendPermission("APP", "send", app));
+        }
+        if (!msgIn(jo)) {
+            log.warn("Message: " + jo.toString() + " hasn't push to kafka, because of full queue and 'fullDrop' enabled");
+        }
     }
 
     public boolean msgIn(Serializable msg) {
