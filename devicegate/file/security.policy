@@ -1,0 +1,27 @@
+grant {
+    permission java.io.FilePermission "/-", "read";
+    permission java.io.FilePermission "/tmp/-", "read,write,delete";
+    permission java.util.PropertyPermission "*", "read,write";
+    permission java.lang.RuntimePermission "*";
+    permission java.lang.reflect.ReflectPermission "suppressAccessChecks";
+
+    permission javax.management.MBeanServerPermission "createMBeanServer";
+    permission javax.management.MBeanPermission "*", "registerMBean";
+    permission javax.management.MBeanPermission "*", "unregisterMBean";
+    permission javax.management.MBeanTrustPermission "register";
+
+    // 10000 for nettty
+    permission java.net.SocketPermission "localhost:10000", "listen,resolve";
+    // 10020 for akka
+    permission java.net.SocketPermission "localhost:10020", "listen,resolve";
+    // 1883 for mqtt
+    permission java.net.SocketPermission "localhost:1883", "listen,resolve";
+    // all for accept, connect and resolve
+    permission java.net.SocketPermission "*", "accept,connect,resolve";
+
+    permission devicegate.security.KafkaSendPermission "APP", "send";
+    permission devicegate.security.KafkaSendPermission "DID", "send";
+    // permission devicegate.security.KafkaSendPermission "ANALOG", "send";
+
+    permission devicegate.security.DeviceCtrlPermission "DeviceCtrl", "ctrl0:ctrl1";
+};
