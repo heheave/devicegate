@@ -1,2 +1,1 @@
-# testing
-It just for testing my projects and noting is important
+It's a project named "DeviceGate" which is responsible for the device connection management. It's based on master/slave structure. Physical device connect to the slave machine through TPC or MQTT protocol and delivering it's message. The slave machine check the permission and some information of the device and transform the original message into specifying format, then push the message to the "DataCleaner" layer through KAFKA. Also, the reconnection of device and other recovery strategies for high availability locate on this layer. And the master node is responsible for management of the slave and holds the global information of the device connections through which it's easy to access a certain device.
