@@ -10,10 +10,13 @@ import devicegate.conf.JsonField;
 import devicegate.conf.V;
 import devicegate.ctrl.Controller;
 import devicegate.kafka.KafkaSender;
-import devicegate.manager.DeviceCacheInfo;
 import devicegate.manager.DeviceManager;
-import devicegate.mqtt.MqttProxyClient;
+import devicegate.mqtt.MqttProtocolManager;
+import devicegate.mqtt.MqttProxyServer;
 import devicegate.netty.SlaveNettyServer;
+import devicegate.netty.TcpProtocolManager;
+import devicegate.protocol.MessageServer;
+import devicegate.protocol.ProtocolManager;
 import devicegate.security.KafkaSendPermission;
 import io.netty.channel.Channel;
 import io.netty.util.Attribute;
@@ -22,7 +25,9 @@ import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -41,9 +46,11 @@ public class SlaveLaunch implements Launch{
 
     private final Configure conf;
 
-    private final SlaveNettyServer nettyServer;
+    //private final SlaveNettyServer nettyServer;
 
-    private final MqttProxyClient mqttProxyClient;
+    //private final MqttProxyClient mqttProxyClient;
+
+    private final Map<String, ProtocolManager> protocolManagerMap;
 
     private final DeviceManager dm;
 
@@ -59,8 +66,8 @@ public class SlaveLaunch implements Launch{
 
     public SlaveLaunch(Configure conf) {
         this.conf = conf;
-        this.nettyServer = new SlaveNettyServer(this, conf);
-        this.mqttProxyClient = new MqttProxyClient(this, conf);
+        //this.nettyServer = new SlaveNettyServer(this, conf);
+        this.protocolManagerMap = new HashMap<String, ProtocolManager>();
         this.dm = DeviceManager.getInstance(this);
         this.slaveActor = new SlaveActor(conf, this);
         this.kafkaSender = new KafkaSender(conf);
@@ -78,9 +85,9 @@ public class SlaveLaunch implements Launch{
         return dm;
     }
 
-    public MqttProxyClient getMqttProxyClient() {
-        return mqttProxyClient;
-    }
+    //public MqttProxyClient getMqttProxyClient() {
+    //    return mqttProxyClient;
+    //}
 
     public Controller getController() {
         return controller;
@@ -98,8 +105,7 @@ public class SlaveLaunch implements Launch{
         if (state.compareAndSet(0, 1)) {
             kafkaSender.start();
             slaveActor.start();
-            nettyServer.start();
-            //mqttProxyClient.start();
+            initialProtocolManagerMap();
             controller.start();
             Msg msg = MessageFactory.getMessage(Msg.TYPE.STASLV);
             msg.setAddress(slaveActor.systemAddress());
@@ -126,8 +132,7 @@ public class SlaveLaunch implements Launch{
                 }
             }
             controller.stop();
-            nettyServer.stop();
-            mqttProxyClient.stop();
+            shutdownProtocolManagerMap();
             slaveActor.stop();
             kafkaSender.stop();
             if (retry) {
@@ -209,5 +214,37 @@ public class SlaveLaunch implements Launch{
         Thread t = new Thread(run);
         t.setDaemon(true);
         t.start();
+    }
+
+    private void initialProtocolManagerMap() {
+        for (ProtocolManager.ProtocolType pt: ProtocolManager.ProtocolType.values()) {
+            if ("MQTT".equalsIgnoreCase(pt.name())) {
+                MessageServer ms = new MqttProxyServer(conf);
+                ProtocolManager pm = new MqttProtocolManager(ms, this, conf);
+                pm.initial();
+                protocolManagerMap.put(pt.name(), pm);
+            } else if ("TCP".equalsIgnoreCase(pt.name())) {
+                MessageServer ms = new SlaveNettyServer(conf);
+                ProtocolManager pm = new TcpProtocolManager(ms, this, conf);
+                pm.initial();
+                protocolManagerMap.put(pt.name(), pm);
+            } else {
+                log.info("Not support protocol " + pt.name() + " now");
+            }
+        }
+    }
+
+    private void shutdownProtocolManagerMap() {
+        for (Map.Entry<String, ProtocolManager> entry: protocolManagerMap.entrySet()) {
+            ProtocolManager pm = entry.getValue();
+            if (pm != null) {
+                pm.shutdown();
+            }
+        }
+        protocolManagerMap.clear();
+    }
+
+    public ProtocolManager getProtocolManager(String name) {
+        return protocolManagerMap.get(name);
     }
 }

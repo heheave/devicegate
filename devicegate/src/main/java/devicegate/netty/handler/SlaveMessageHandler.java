@@ -1,50 +1,60 @@
 package devicegate.netty.handler;
 
-import devicegate.conf.Configure;
 import devicegate.conf.JsonField;
 import devicegate.conf.V;
 import devicegate.launch.SlaveLaunch;
 import devicegate.manager.DeviceCacheInfo;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
+import devicegate.protocol.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
 import java.security.AccessControlException;
-import java.util.Map;
-import java.util.Set;
-
 
 /**
  * Created by xiaoke on 17-5-6.
  */
-public class SlaveMessageHandler extends ChannelInboundHandlerAdapter {
+@ChannelHandler.Sharable
+public class SlaveMessageHandler extends ChannelInboundHandlerAdapter implements MessageHandler{
 
     private static final Logger log = Logger.getLogger(SlaveMessageHandler.class);
 
-    private final SlaveLaunch slaveLaunch;
+    private final ProtocolManager pm;
 
-    private final Configure conf;
-
-    public SlaveMessageHandler(SlaveLaunch slaveLaunch) {
-        this.slaveLaunch = slaveLaunch;
-        this.conf = slaveLaunch.getConf();
+    public SlaveMessageHandler(ProtocolManager pm) {
+        this.pm = pm;
     }
 
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         JSONObject jo = (JSONObject)msg;
+        messageInHandler(jo, AttachInfo.constantAttachInfo(ctx.channel()));
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        cause.printStackTrace();
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        //log.info("Channel is stopped");
+        pm.slaveLaunch().getDm().removeChannel(ctx.channel());
+    }
+
+    public void messageInHandler(JSONObject jo, AttachInfo attachInfo) {
         String id = jo.getString(JsonField.DeviceValue.ID);
+        SlaveLaunch slaveLaunch = pm.slaveLaunch();
         if (id != null) {
             String did = jo.getString(JsonField.DeviceValue.ID);
             boolean cnt = jo.containsKey(JsonField.DeviceValue.CNT) ? jo.getBoolean(JsonField.DeviceValue.CNT) : false;
             // check has already existed?
             DeviceCacheInfo dci = slaveLaunch.getDm().get(did);
+            final Channel channel = (Channel) attachInfo.get();
             if (cnt) {
                 log.info("cnt message");
                 // required cnt and has already existed
@@ -58,22 +68,22 @@ public class SlaveMessageHandler extends ChannelInboundHandlerAdapter {
                     // required cnt but not existed, do cnt
                     //check user and passwd
                     log.info("cnt not existed, check???");
-                    checked = true;
-                    if (checked) {
-                        log.info("checked");
-                        dci = slaveLaunch.getDm().addChannel(id, ctx.channel());
+                    AuthRet authRet = pm.authorize(jo, ProtocolManager.AuthType.CNT);
+                    if (authRet.isAuthorized()) {
+                        checked = true;
+                        dci = slaveLaunch.getDm().addChannel(id, channel);
                         if (dci != null) {
                             dci.bindWithJson(jo);
                         }
                     } else {
-                        log.info("unchecked");
                         checked = false;
                     }
                 }
                 if (checked) {
-                    ctx.channel().writeAndFlush(conf.getStringOrElse(V.DEVICE_MSG_ACK, "CNT SUCCESS"));
+                    pm.messageOut(backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_MSG_ACK, "CNT SUCCESS")), attachInfo);
                 } else {
-                    ctx.channel().writeAndFlush(conf.getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH")).addListener(ChannelFutureListener.CLOSE);
+                    pm.messageOut(backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH")),
+                            new ChannelAttachInfo(channel, true, false));
                 }
             } else {
                 log.info("data message");
@@ -83,24 +93,23 @@ public class SlaveMessageHandler extends ChannelInboundHandlerAdapter {
                     try {
                         slaveLaunch.getKafkaSender().pushToKafka(dci.decorateJson(jo));
                     } catch (AccessControlException e) {
-                        ctx.channel().writeAndFlush(conf.getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH")).addListener(ChannelFutureListener.CLOSE);
+                        pm.messageOut(backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH")),
+                                new ChannelAttachInfo(channel, true, false));
                     }
                 } else {
                     log.info("session not found");
-                    ctx.channel().writeAndFlush(conf.getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH")).addListener(ChannelFutureListener.CLOSE);
+                    pm.messageOut(backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH")),
+                            new ChannelAttachInfo(channel, true, false));
                 }
             }
         }
     }
 
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
+    private JSONObject backInfoWrap(String info) {
+        return JSONObject.fromObject("{'back':'" + info + "'}");
     }
 
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        //log.info("Channel is stopped");
-        slaveLaunch.getDm().removeChannel(ctx.channel());
+    public void messageOutHandler(JSONObject jo, AttachInfo attachInfo) {
+        log.info("Message " + jo + " send to device through " + attachInfo.get());
     }
 }

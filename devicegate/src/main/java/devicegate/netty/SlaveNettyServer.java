@@ -6,6 +6,7 @@ import devicegate.netty.handler.SlaveOutEncoderHandler;
 import devicegate.netty.handler.SlaveInDecoderHandler;
 import devicegate.netty.handler.SlaveMessageHandler;
 import devicegate.launch.SlaveLaunch;
+import devicegate.protocol.*;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -13,6 +14,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
@@ -20,7 +22,7 @@ import java.net.InetSocketAddress;
 /**
  * Created by xiaoke on 17-5-16.
  */
-public class SlaveNettyServer {
+public class SlaveNettyServer extends MessageServer{
 
     private static Logger log = Logger.getLogger(SlaveNettyServer.class);
 
@@ -32,12 +34,12 @@ public class SlaveNettyServer {
 
     private final InetSocketAddress bindAddress;
 
-    private final SlaveLaunch belongsToLaunch;
+    private volatile MessageHandler nettyHandler;
 
     private volatile boolean isRunning;
 
-    public SlaveNettyServer(SlaveLaunch slaveLaunch, Configure conf) {
-        this.belongsToLaunch = slaveLaunch;
+    public SlaveNettyServer(Configure conf) {
+        super(conf);
         this.bossGroup = new NioEventLoopGroup();
         this.workGroup = new NioEventLoopGroup();
         this.conf = conf;
@@ -48,6 +50,7 @@ public class SlaveNettyServer {
     }
 
     public void start() {
+        assert nettyHandler != null : "NettyMessageHandler shouldn't be null";
         isRunning = true;
         try {
             int SO_BACKLOG = conf.getIntOrElse(V.NETTY_SERVER_SO_BACKLOG, 100);
@@ -60,7 +63,7 @@ public class SlaveNettyServer {
                         @Override
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             socketChannel.pipeline().addLast(new SlaveInDecoderHandler());
-                            socketChannel.pipeline().addLast(new SlaveMessageHandler(belongsToLaunch));
+                            socketChannel.pipeline().addLast((ChannelInboundHandlerAdapter)nettyHandler);
                             socketChannel.pipeline().addLast(new SlaveOutEncoderHandler());
                         }
                     });
@@ -80,6 +83,42 @@ public class SlaveNettyServer {
         isRunning = false;
         bossGroup.shutdownGracefully();
         workGroup.shutdownGracefully();
+    }
+
+    @Override
+    public void setMessageHandler(MessageHandler mi) {
+        nettyHandler = mi;
+    }
+
+    @Override
+    public void sendMessage(JSONObject jo, AttachInfo attachInfo) throws MessageException {
+        if (jo == null || attachInfo == null) {
+            throw new MessageException("NullPointerException", jo, attachInfo, false);
+        }
+        Object getValue = attachInfo.get();
+        boolean isClosed = false;
+        boolean isSync = false;
+        Channel channel;
+        if (getValue != null) {
+            channel = (Channel)getValue;
+        } else {
+            channel = ((ChannelAttachInfo)attachInfo).getChannel();
+            isClosed = ((ChannelAttachInfo)attachInfo).isClosed();
+            isSync = ((ChannelAttachInfo)attachInfo).isSync();
+        }
+        if (channel != null) {
+            try {
+                ChannelFuture cf = channel.writeAndFlush(jo.toString());
+                if (isClosed) {
+                    cf.addListener(ChannelFutureListener.CLOSE);
+                }
+                if (isSync) {
+                    cf.sync();
+                }
+            } catch (Exception e) {
+                throw new MessageException("Send message error" + e.getMessage(), jo, attachInfo, false);
+            }
+        }
     }
 
     public InetSocketAddress getBindAddress() {

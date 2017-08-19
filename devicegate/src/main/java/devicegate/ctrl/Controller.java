@@ -10,6 +10,9 @@ import devicegate.conf.JsonField;
 import devicegate.conf.V;
 import devicegate.launch.SlaveLaunch;
 import devicegate.manager.DeviceCacheInfo;
+import devicegate.mqtt.MqttHandler;
+import devicegate.protocol.AttachInfo;
+import devicegate.protocol.ChannelAttachInfo;
 import devicegate.security.DeviceCtrlPermission;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
@@ -68,7 +71,7 @@ public class Controller {
     private void ctrlOnce(ControlCache cc) {
         if (cc != null && cc.getSender() != null && cc.getMsg() != null) {
             JSONObject data = cc.getMsg().data();
-            String did = data != null ? data.getString(JsonField.DeviceCtrl.ID) : null;
+            final String did = data != null ? data.getString(JsonField.DeviceCtrl.ID) : null;
             if (did != null) {
                 DeviceCacheInfo dci = slaveLaunch.getDm().get(did);
                 if (dci != null) {
@@ -80,12 +83,16 @@ public class Controller {
                             sm.checkPermission(new DeviceCtrlPermission(magic));
                         }
                         if (DeviceCacheInfo.Protocol.TCP.equals(dci.protocol())) {
-
-                            dci.getChannel().writeAndFlush(data.toString()).sync();
-                            tellTo(cc, null);
+                            if(slaveLaunch.getProtocolManager("TCP").messageOut(data,
+                                    new ChannelAttachInfo(dci.getChannel(), false, true))) {
+                                tellTo(cc, null);
+                            } else {
+                                tellTo(cc, "TCP send error");
+                            }
+                            //dci.getChannel().writeAndFlush(data.toString()).sync();
 
                         } else if (DeviceCacheInfo.Protocol.MQTT.equals(dci.protocol())){
-                            if (slaveLaunch.getMqttProxyClient().pub(String.format("device_ctrl_%s", did), data.toString())) {
+                            if (slaveLaunch.getProtocolManager("MQTT").messageOut(data, AttachInfo.constantAttachInfo(String.format("device_ctrl_%s", did)))) {
                                 tellTo(cc, null);
                             } else {
                                 tellTo(cc, "MQTT pub error");
