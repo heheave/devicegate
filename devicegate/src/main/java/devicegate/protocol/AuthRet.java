@@ -30,6 +30,8 @@ public class AuthRet {
         return isAuthorized() ? null : e;
     }
 
+    public static final AuthRet AUTH_PASSED = AuthRet.apply(true, null);
+
     public static AuthRet apply(boolean passed, Exception e) {
         return new AuthRet(passed, e);
     }

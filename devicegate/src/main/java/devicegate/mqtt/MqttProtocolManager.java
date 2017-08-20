@@ -24,7 +24,7 @@ public class MqttProtocolManager extends ProtocolManager{
     @Override
     public AuthRet authorize(JSONObject jo, AuthType type) {
         // TODO(xiaoke): Now we don't do authorizing
-        return AuthRet.apply(true, null);
+        return AuthRet.AUTH_PASSED;
     }
 
     @Override
