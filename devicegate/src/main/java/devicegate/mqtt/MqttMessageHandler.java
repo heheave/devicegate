@@ -60,26 +60,27 @@ public class MqttMessageHandler implements MessageHandler{
                     }
                     if (checked) {
                         log.info("checked");
-                        JSONObject backInfo = backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_MSG_ACK, "CNT SUCCESS"));
+                        JSONObject backInfo = pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_MSG_ACK, "CNT SUCCESS"));
                         pm.messageOut(backInfo, AttachInfo.constantAttachInfo(String.format(topicFormat, did)));
                     } else {
                         log.info("unchecked");
-                        JSONObject backInfo = backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH"));
+                        JSONObject backInfo = pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH, "DEVICE NOT AUTH"));
                         pm.messageOut(backInfo, AttachInfo.constantAttachInfo(String.format(topicFormat, did)));
                     }
                 } else {
                     log.info("data message");
-                    if (dci != null) {
+                    AuthRet authRet = pm.authorize(jo, ProtocolManager.AuthType.IN);
+                    if (dci != null && authRet.isAuthorized()) {
                         log.info("session found");
                         dci.updateTime();
                         try {
-                            slaveLaunch.getKafkaSender().pushToKafka(dci.decorateJson(jo));
+                            pm.pushToKafka(dci.decorateJson(jo));
                         } catch (AccessControlException e) {
                             slaveLaunch.getDm().removeChannel(did);
                         }
                     } else {
-                        log.info("session not found");
-                        JSONObject backInfo = backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH"));
+                        log.info("session not found or error cause by " + authRet.faildReason());
+                        JSONObject backInfo = pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH, "DEVICE NOT AUTH"));
                         pm.messageOut(backInfo, AttachInfo.constantAttachInfo(String.format(topicFormat, did)));
                     }
                 }
@@ -87,9 +88,7 @@ public class MqttMessageHandler implements MessageHandler{
         }
     }
 
-    private JSONObject backInfoWrap(String info) {
-        return JSONObject.fromObject("{'back':'" + info + "'}");
-    }
+
 
     public void messageOutHandler(JSONObject jo, AttachInfo attachInfo) {
         log.info("Message " + jo + " send to device on topic " + attachInfo.get());

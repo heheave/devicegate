@@ -80,36 +80,37 @@ public class SlaveMessageHandler extends ChannelInboundHandlerAdapter implements
                     }
                 }
                 if (checked) {
-                    pm.messageOut(backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_MSG_ACK, "CNT SUCCESS")), attachInfo);
+                    pm.messageOut(pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_MSG_ACK, "CNT SUCCESS")), attachInfo);
                 } else {
-                    pm.messageOut(backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH")),
+                    pm.messageOut(pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH, "DEVICE NOT AUTH")),
                             new ChannelAttachInfo(channel, true, false));
                 }
             } else {
                 log.info("data message");
-                if (dci != null) {
+                AuthRet authRet = pm.authorize(jo, ProtocolManager.AuthType.IN);
+                if (dci != null && authRet.isAuthorized()) {
                     log.info("session found");
                     dci.updateTime();
                     try {
-                        slaveLaunch.getKafkaSender().pushToKafka(dci.decorateJson(jo));
+                        pm.pushToKafka(dci.decorateJson(jo));
                     } catch (AccessControlException e) {
-                        pm.messageOut(backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH")),
+                        pm.messageOut(pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH, "DEVICE NOT AUTH")),
                                 new ChannelAttachInfo(channel, true, false));
                     }
                 } else {
-                    log.info("session not found");
-                    pm.messageOut(backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_CNT_NOT_AUTH, "DEVICE NOT AUTH")),
+                    log.info("session not found or error cause by " + authRet.faildReason());
+                    pm.messageOut(pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH, "DEVICE NOT AUTH")),
                             new ChannelAttachInfo(channel, true, false));
                 }
             }
         }
     }
 
-    private JSONObject backInfoWrap(String info) {
-        return JSONObject.fromObject("{'back':'" + info + "'}");
-    }
+//    private JSONObject backInfoWrap(String info) {
+//        return JSONObject.fromObject("{'back':'" + info + "'}");
+//    }
 
     public void messageOutHandler(JSONObject jo, AttachInfo attachInfo) {
-        log.info("Message " + jo + " send to device through " + attachInfo.get());
+        log.info("Message " + jo + " send to device through channel " + attachInfo.get());
     }
 }

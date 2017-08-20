@@ -1,9 +1,9 @@
 package devicegate.protocol;
 
 import devicegate.conf.Configure;
+import devicegate.conf.JsonField;
 import devicegate.launch.SlaveLaunch;
 import net.sf.json.JSONObject;
-import org.apache.commons.collections.functors.ExceptionClosure;
 import org.apache.log4j.Logger;
 
 /**
@@ -78,5 +78,19 @@ abstract public class ProtocolManager {
         } catch (Exception e) {
             log.error("Shutdown " + getProtocolType().name() + " MessageServer error", e);
         }
+    }
+
+    public void pushToKafka(JSONObject jo) {
+        slaveLaunch.getKafkaSender().pushToKafka(jo);
+    }
+
+    public JSONObject backInfoWrap(String info) {
+        JSONObject jo = new JSONObject();
+        if (info != null) {
+            jo.put(JsonField.DeviceCtrl.BACK, info);
+        } else {
+            jo.put(JsonField.DeviceCtrl.BACK, "NULL");
+        }
+        return jo;
     }
 }

@@ -115,6 +115,9 @@ public class SlaveNettyServer extends MessageServer{
                 if (isSync) {
                     cf.sync();
                 }
+                if (nettyHandler != null) {
+                    nettyHandler.messageOutHandler(jo, attachInfo);
+                }
             } catch (Exception e) {
                 throw new MessageException("Send message error" + e.getMessage(), jo, attachInfo, false);
             }

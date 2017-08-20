@@ -12,7 +12,7 @@ public class V {
     public static final String MQTT = "MQTT";
     public static final String TCP = "TCP";
 
-    public static final String DEVICE_CNT_NOT_AUTH = "sjtumaster.device.cnt.not.auth";
+    public static final String DEVICE_NOT_AUTH = "sjtumaster.device.not.auth";
     public static final String DEVICE_MSG_ACK = "sjtumaster.device.msg.ack";
 
     // used for base
