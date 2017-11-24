@@ -38,7 +38,7 @@ public class Controller {
     public Controller(SlaveLaunch slaveLaunch, Configure conf) {
         this.slaveLaunch = slaveLaunch;
         this.conf = conf;
-        int maxSize = conf.getIntOrElse(V.CTRL_QUEUE_COMPACITY, 1000);
+        int maxSize = conf.getIntOrElse(V.CTRL_QUEUE_COMPACITY);
         this.cacheQueue = new ArrayBlockingQueue<ControlCache>(maxSize);
     }
 

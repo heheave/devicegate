@@ -60,11 +60,11 @@ public class MqttMessageHandler implements MessageHandler{
                     }
                     if (checked) {
                         log.info("checked");
-                        JSONObject backInfo = pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_MSG_ACK, "CNT SUCCESS"));
+                        JSONObject backInfo = pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_MSG_ACK));
                         pm.messageOut(backInfo, AttachInfo.constantAttachInfo(String.format(topicFormat, did)));
                     } else {
                         log.info("unchecked");
-                        JSONObject backInfo = pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH, "DEVICE NOT AUTH"));
+                        JSONObject backInfo = pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH));
                         pm.messageOut(backInfo, AttachInfo.constantAttachInfo(String.format(topicFormat, did)));
                     }
                 } else {
@@ -80,7 +80,7 @@ public class MqttMessageHandler implements MessageHandler{
                         }
                     } else {
                         log.info("session not found or error cause by " + authRet.faildReason());
-                        JSONObject backInfo = pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH, "DEVICE NOT AUTH"));
+                        JSONObject backInfo = pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH));
                         pm.messageOut(backInfo, AttachInfo.constantAttachInfo(String.format(topicFormat, did)));
                     }
                 }

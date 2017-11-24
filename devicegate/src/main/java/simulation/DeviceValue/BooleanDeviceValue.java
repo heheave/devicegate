@@ -3,11 +3,11 @@ package simulation.DeviceValue;
 /**
  * Created by xiaoke on 17-5-15.
  */
-public class BooleanDeviceValue extends AbstractDeviceValue<Boolean> {
+public class BooleanDeviceValue extends AbstractDeviceValue<Integer> {
 
 
     public BooleanDeviceValue(boolean isValid, Boolean value) {
-        super(isValid, value, null);
+        super(isValid, value ? 1 : 0, null);
     }
 
     public BooleanDeviceValue(boolean value) {

@@ -1,7 +1,5 @@
 package devicegate.manager;
 
-import io.netty.channel.Channel;
-
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 

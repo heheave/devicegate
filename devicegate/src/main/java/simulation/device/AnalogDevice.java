@@ -8,16 +8,16 @@ import simulation.view.DeviceInstance;
  */
 public class AnalogDevice extends DeviceInstance<DoubleDeviceValue> {
 
-    public AnalogDevice(String id, String type, String desc, String company, Location location, long dtimestamp, int portNum) {
-        super(id, type, desc, company, location, dtimestamp, portNum);
+    public AnalogDevice(String app, String id, String type, String desc, String company, Location location, long dtimestamp, int portNum) {
+        super(app, id, type, desc, company, location, dtimestamp, portNum);
     }
 
-    public AnalogDevice(String id, int portNum) {
-        this(id, null, null, null, null, System.currentTimeMillis(), portNum);
+    public AnalogDevice(String app, String id, int portNum) {
+        this(app, id, null, null, null, null, System.currentTimeMillis(), portNum);
     }
 
-    public AnalogDevice(String id) {
-        this(id, 1);
+    public AnalogDevice(String app, String id) {
+        this(app, id, 1);
     }
 
     public String mtype() {

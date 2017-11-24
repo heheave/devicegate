@@ -1,32 +1,23 @@
 package devicegate.launch;
 
 import devicegate.actor.SlaveActor;
-import devicegate.actor.message.AddIdMessage;
+import devicegate.actor.message.HBInfo;
 import devicegate.actor.message.MessageFactory;
 import devicegate.actor.message.Msg;
-import devicegate.actor.message.TellMeMessage;
 import devicegate.conf.Configure;
-import devicegate.conf.JsonField;
 import devicegate.conf.V;
 import devicegate.ctrl.Controller;
 import devicegate.kafka.KafkaSender;
 import devicegate.manager.DeviceManager;
-import devicegate.mqtt.MqttProtocolManager;
-import devicegate.mqtt.MqttProxyServer;
 import devicegate.netty.SlaveNettyServer;
 import devicegate.netty.TcpProtocolManager;
 import devicegate.protocol.MessageServer;
 import devicegate.protocol.ProtocolManager;
-import devicegate.security.KafkaSendPermission;
-import io.netty.channel.Channel;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
+import devicegate.util.SystemStateMonitorUtil;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -163,7 +154,7 @@ public class SlaveLaunch implements Launch{
     }
 
     public void startHeartbeatThread() {
-        final long masterPeriod = conf.getLongOrElse(V.MASTER_SCHELDULE_PERIOD, 10000);
+        final long masterPeriod = conf.getLongOrElse(V.MASTER_SCHELDULE_PERIOD);
         Runnable run = new Runnable() {
             public void run() {
                 long lastCleanTime = System.currentTimeMillis();
@@ -180,9 +171,29 @@ public class SlaveLaunch implements Launch{
                         dm.cleanAll(currentTime);
                     }
                     Msg hbMsg = MessageFactory.getMessage(Msg.TYPE.HB);
+                    float cpu = SystemStateMonitorUtil.getCpuUsage();
+                    float mem = SystemStateMonitorUtil.getMemUsage();
+                    float io = SystemStateMonitorUtil.getIoUsage();
+                    float net = SystemStateMonitorUtil.getNetUsage();
+                    int msgNum = dm.getMsgNum();
+                    long msgByte = dm.getMsgBytes();
+                    int msgNumT = dm.getMsgNumT();
+                    long msgByteT = dm.getMsgBytesT();
+                    int cntNum = dm.getConnectionSize();
+                    HBInfo hbInfo = new HBInfo(
+                            cpu,
+                            mem,
+                            io,
+                            net,
+                            msgNum,
+                            msgByte,
+                            msgNumT,
+                            msgByteT,
+                            cntNum);
+                    hbMsg.setData(JSONObject.fromObject(hbInfo));
                     hbMsg.setAddress(slaveActor.systemAddress());
                     long sleepTime = lastSleepTime;
-                    long timeout = conf.getLongOrElse(V.ACTOR_REPLY_TIMEOUT, 2000);
+                    long timeout = conf.getLongOrElse(V.ACTOR_REPLY_TIMEOUT);
                     slaveActor.sendToRemote(hbMsg, null);
                     //slaveActor.sendToMasterWithReply(hbMsg, timeout);
                     hbLocks.lock();
@@ -219,10 +230,10 @@ public class SlaveLaunch implements Launch{
     private void initialProtocolManagerMap() {
         for (ProtocolManager.ProtocolType pt: ProtocolManager.ProtocolType.values()) {
             if ("MQTT".equalsIgnoreCase(pt.name())) {
-                MessageServer ms = new MqttProxyServer(conf);
-                ProtocolManager pm = new MqttProtocolManager(ms, this, conf);
-                pm.initial();
-                protocolManagerMap.put(pt.name(), pm);
+//                MessageServer ms = new MqttProxyServer(conf);
+//                ProtocolManager pm = new MqttProtocolManager(ms, this, conf);
+//                pm.initial();
+//                protocolManagerMap.put(pt.name(), pm);
             } else if ("TCP".equalsIgnoreCase(pt.name())) {
                 MessageServer ms = new SlaveNettyServer(conf);
                 ProtocolManager pm = new TcpProtocolManager(ms, this, conf);

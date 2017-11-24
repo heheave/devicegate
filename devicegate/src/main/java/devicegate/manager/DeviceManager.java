@@ -12,6 +12,8 @@ import io.netty.util.AttributeKey;
 import org.apache.log4j.Logger;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by xiaoke on 17-5-16.
@@ -23,6 +25,16 @@ public class DeviceManager extends AbstactManager<String, DeviceCacheInfo>{
     private static DeviceManager cm = null;
 
     private final SlaveLaunch slaveLaunch;
+
+    private final AtomicInteger msgNum = new AtomicInteger(0);
+
+    private final AtomicLong msgBytes = new AtomicLong(0L);
+
+    private volatile long dayTime = System.currentTimeMillis() / 86400000;
+
+    private final AtomicInteger msgNumT = new AtomicInteger(0);
+
+    private final AtomicLong msgBytesT = new AtomicLong(0L);
 
     private DeviceManager(SlaveLaunch slaveLaunch) {
         this.slaveLaunch = slaveLaunch;
@@ -46,9 +58,9 @@ public class DeviceManager extends AbstactManager<String, DeviceCacheInfo>{
             if (entry != null) {
                 String ptc;
                 if (entry.getValue().getChannel() != null) {
-                    ptc = V.TCP;
+                    ptc = DeviceCacheInfo.Protocol.TCP.name();
                 } else {
-                    ptc = V.MQTT;
+                    ptc = DeviceCacheInfo.Protocol.MQTT.name();
                 }
                 keysCopy.add(String.format("%s,%s", entry.getValue(), ptc));
             }
@@ -88,7 +100,7 @@ public class DeviceManager extends AbstactManager<String, DeviceCacheInfo>{
     public DeviceCacheInfo addChannel(String id, Channel channel) {
         // added to local manager
 
-        DeviceCacheInfo di = new DeviceCacheInfo(id, channel, slaveLaunch.getConf().getLongOrElse(V.SLAVE_SESSION_TIMEOUT, 30000));
+        DeviceCacheInfo di = new DeviceCacheInfo(id, channel, slaveLaunch.getConf().getLongOrElse(V.SLAVE_SESSION_TIMEOUT));
         put(id, di);
         // added to remote manager
         AddIdMessage msg = (AddIdMessage) MessageFactory.getMessage(Msg.TYPE.ADDID);
@@ -147,7 +159,7 @@ public class DeviceManager extends AbstactManager<String, DeviceCacheInfo>{
     }
 
     public List<List<String>> getTellMasterToInfo() {
-        int maxIds = slaveLaunch.getConf().getIntOrElse(V.ACTOR_TELLME_MAX_IDS, 50);
+        int maxIds = slaveLaunch.getConf().getIntOrElse(V.ACTOR_TELLME_MAX_IDS);
         List<String> keys = getAllKeys();
         if (keys.isEmpty()) return null;
         int keySize = keys.size();
@@ -169,5 +181,38 @@ public class DeviceManager extends AbstactManager<String, DeviceCacheInfo>{
             res.add(tmp);
         }
         return res;
+    }
+
+    public void msgStatisticUp(long time, int num, long bytes) {
+        long tmpDt = time / 86400000;
+        if (tmpDt != dayTime) {
+            dayTime = tmpDt;
+            msgNumT.set(0);
+            msgBytesT.set(0L);
+        }
+        msgNum.addAndGet(num);
+        msgBytes.addAndGet(bytes);
+        msgNumT.addAndGet(num);
+        msgBytesT.addAndGet(bytes);
+    }
+
+    public int getMsgNum() {
+        return msgNum.get();
+    }
+
+    public long getMsgBytes() {
+        return msgBytes.get();
+    }
+
+    public int getMsgNumT() {
+        return msgNumT.get();
+    }
+
+    public long getMsgBytesT() {
+        return msgBytesT.get();
+    }
+
+    public int getConnectionSize() {
+        return idToCacheObj.size();
     }
 }

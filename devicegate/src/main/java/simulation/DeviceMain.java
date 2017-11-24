@@ -1,23 +1,11 @@
 package simulation;
 
-import devicegate.conf.JsonField;
-import devicegate.conf.V;
-import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
-import simulation.DeviceValue.*;
-import simulation.device.AbstracMonitorDevice;
+import simulation.DeviceValue.AbstractDeviceValue;
 import simulation.device.Device;
 import simulation.device.DeviceFactory;
-import simulation.view.DeviceFrame;
 import simulation.view.DeviceInstance;
 
-import javax.swing.*;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -38,8 +26,11 @@ public class DeviceMain {
 
         private final DeviceInstance<AbstractDeviceValue<?>> device;
 
-        public SendRun(Device.TYPE type, int portNum) {
-            device = DeviceFactory.getMonitorDevice(type, portNum);
+        public SendRun(String app, String dmark, Device.TYPE dtype, int portNum) {
+            device = DeviceFactory.getMonitorDevice(dtype, app, dmark, portNum);
+            if (device == null) {
+                throw new NullPointerException(String.format("%s:%s already exists", app, dmark));
+            }
             device.start();
         }
 
@@ -53,25 +44,31 @@ public class DeviceMain {
 
     }
 
-    public static void main(String[] args) {
-        PropertyConfigurator.configure(V.LOG_PATH);
-        log.info("starting...");
-        final ScheduledExecutorService es = Executors.newScheduledThreadPool(3);
-        final SendRun switchDevice = new SendRun(Device.TYPE.SWITCH, 1);
-        final SendRun digitalDevice = new SendRun(Device.TYPE.DIGITL, 2);
-        final SendRun analogDevice = new SendRun(Device.TYPE.ANALOG, 4);
-        es.scheduleAtFixedRate(switchDevice, 1000, 15000, TimeUnit.MILLISECONDS);
-        es.scheduleAtFixedRate(digitalDevice, 1000, 15000, TimeUnit.MILLISECONDS);
-        es.scheduleAtFixedRate(analogDevice, 1000, 15000, TimeUnit.MILLISECONDS);
+    final static ScheduledExecutorService es = Executors.newScheduledThreadPool(3);
+    static {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 es.shutdown();
-                switchDevice.stop();
-                digitalDevice.stop();
-                analogDevice.stop();
                 log.info("shutdown!!!");
             }
         });
+    }
+
+    public static void addNewDevice(String app, String dmark, String type, int portNum) {
+        //log.info("starting...");
+        //final SendRun digitalDevice = new SendRun(Device.TYPE.DIGITL, 2);
+        //final SendRun analogDevice = new SendRun(Device.TYPE.ANALOG, 4);
+        if ("SWITCH".equalsIgnoreCase(type)) {
+            SendRun sr = new SendRun(app, dmark, Device.TYPE.SWITCH, portNum);
+            es.scheduleAtFixedRate(sr, 1000, 15000, TimeUnit.MILLISECONDS);
+        } else if ("DIGITL".equalsIgnoreCase(type)) {
+            SendRun sr = new SendRun(app, dmark, Device.TYPE.DIGITL, portNum);
+            es.scheduleAtFixedRate(sr, 1000, 15000, TimeUnit.MILLISECONDS);
+        } else if ("ANALOG".equalsIgnoreCase(type)) {
+            SendRun sr = new SendRun(app, dmark, Device.TYPE.ANALOG, portNum);
+            es.scheduleAtFixedRate(sr, 1000, 15000, TimeUnit.MILLISECONDS);
+        }
+        //return true;
         //JFrame jFrame = new DeviceFrame("ABC001");
 
     }

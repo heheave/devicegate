@@ -43,8 +43,8 @@ public class SlaveNettyServer extends MessageServer{
         this.bossGroup = new NioEventLoopGroup();
         this.workGroup = new NioEventLoopGroup();
         this.conf = conf;
-        String localHost = conf.getString(V.SLAVE_HOST);
-        int localPort = conf.getIntOrElse(V.NETTY_SLAVE_SERVER_PORT, 10000);
+        String localHost = conf.getStringOrElse(V.SLAVE_HOST);
+        int localPort = conf.getIntOrElse(V.NETTY_SLAVE_SERVER_PORT);
         this.bindAddress = new InetSocketAddress(localHost, localPort);
         this.isRunning = false;
     }
@@ -53,7 +53,7 @@ public class SlaveNettyServer extends MessageServer{
         assert nettyHandler != null : "NettyMessageHandler shouldn't be null";
         isRunning = true;
         try {
-            int SO_BACKLOG = conf.getIntOrElse(V.NETTY_SERVER_SO_BACKLOG, 100);
+            int SO_BACKLOG = conf.getIntOrElse(V.NETTY_SERVER_SO_BACKLOG);
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(this.bossGroup, this.workGroup)
                     .channel(NioServerSocketChannel.class)

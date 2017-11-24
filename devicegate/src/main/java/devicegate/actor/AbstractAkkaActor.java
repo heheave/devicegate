@@ -18,11 +18,11 @@ abstract public class AbstractAkkaActor {
     }
 
     protected String getRemoteActorPath(InetSocketAddress remoteSystemAddr) {
-        int masterPort = conf.getIntOrElse(V.ACTOR_MASTER_PORT, 10010);
+        int masterPort = conf.getIntOrElse(V.ACTOR_MASTER_PORT);
         String remoteHost;
         int remotePort;
         if (remoteSystemAddr == null) {
-            remoteHost = conf.getString(V.MASTER_HOST);
+            remoteHost = conf.getStringOrElse(V.MASTER_HOST);
             remotePort = masterPort;
         } else {
             remoteHost = remoteSystemAddr.getAddress().getHostAddress();
@@ -30,14 +30,15 @@ abstract public class AbstractAkkaActor {
         }
         String remoteName;
         if (remotePort == masterPort) {
-            remoteName = conf.getStringOrElse(V.ACTOR_MASTER_SYSTEM_NAME, "MASTERSYSTEM");
+            remoteName = conf.getStringOrElse(V.ACTOR_MASTER_SYSTEM_NAME);
         } else {
-            remoteName = conf.getStringOrElse(V.ACTOR_SLAVE_SYSTEM_NAME, "SLAVESYSTEM");
+            remoteName = conf.getStringOrElse(V.ACTOR_SLAVE_SYSTEM_NAME);
         }
-        String remotePath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH, "ACTORPATH");
+        String remotePath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH);
         String remoteActorPath = "akka.tcp://" + remoteName + "@" + remoteHost + ":" + remotePort + "/user/" + remotePath;
         return remoteActorPath;
     }
+
     abstract void start() throws Exception;
 
     abstract void stop();

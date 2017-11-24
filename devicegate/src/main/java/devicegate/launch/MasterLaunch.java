@@ -79,8 +79,8 @@ public class MasterLaunch implements Launch{
     }
 
     private void startShedualTask() {
-        long delay = conf.getLongOrElse(V.MASTER_SCHELDULE_DELAY, 1000);
-        final long period = conf.getLongOrElse(V.MASTER_SCHELDULE_PERIOD, 10000);
+        long delay = conf.getLongOrElse(V.MASTER_SCHELDULE_DELAY);
+        final long period = conf.getLongOrElse(V.MASTER_SCHELDULE_PERIOD);
         es.scheduleAtFixedRate(new Runnable() {
             public void run() {
                 mm.cleanOldAddress(System.currentTimeMillis() - (period << 1));

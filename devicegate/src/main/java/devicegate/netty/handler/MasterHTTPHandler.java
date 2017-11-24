@@ -1,12 +1,12 @@
 package devicegate.netty.handler;
 
 import devicegate.actor.message.AckMessage;
+import devicegate.actor.message.DinfoMessage;
 import devicegate.actor.message.MessageFactory;
 import devicegate.actor.message.Msg;
 import devicegate.conf.JsonField;
 import devicegate.launch.MasterLaunch;
 import devicegate.manager.MachineCacheInfo;
-import devicegate.manager.MachineManager;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -23,7 +23,6 @@ import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -53,10 +52,19 @@ public class MasterHTTPHandler extends SimpleChannelInboundHandler<FullHttpReque
         if (request.getMethod() == HttpMethod.GET) {
             final String uri = request.getUri();
             String sanitizedUri = sanitizeURI(uri);
-            if (!"show".equals(sanitizedUri)) {
-                sendError(cntx, HttpResponseStatus.FORBIDDEN);
-            } else {
+            if ("show".equals(sanitizedUri)) {
                 responseShow(cntx, request);
+            } else if("clusterInfo".equals(sanitizedUri)){
+                JSONObject jo = JSONObject.fromObject(master.getMm().clusterStatistic());
+                responseJson(cntx, jo);
+            } else if(sanitizedUri.startsWith("devinfo")){
+                String did = sanitizedUri.substring(sanitizedUri.lastIndexOf("/") + 1);
+                responseDevinfo(cntx, did);
+            } else if(sanitizedUri.startsWith("online")){
+                String did = sanitizedUri.substring(sanitizedUri.lastIndexOf("/") + 1);
+                responseOnline(cntx, did);
+            } else {
+                sendError(cntx, HttpResponseStatus.FORBIDDEN);
             }
         } else if (request.getMethod() == HttpMethod.POST) {
             final String uri = request.getUri();
@@ -85,6 +93,38 @@ public class MasterHTTPHandler extends SimpleChannelInboundHandler<FullHttpReque
         } else {
             sendError(cntx, HttpResponseStatus.METHOD_NOT_ALLOWED);
         }
+    }
+
+    private void responseOnline(ChannelHandlerContext cntx, String did) {
+        MachineCacheInfo mci = master.getMm().get(did);
+        JSONObject respone = new JSONObject();
+        if (mci != null && mci.getIsa() != null) {
+            respone.put(did, true);
+        } else {
+            respone.put(did, false);
+        }
+        responseJson(cntx, respone);
+    }
+
+    private void responseDevinfo(ChannelHandlerContext cntx, String did) {
+        MachineCacheInfo mci = master.getMm().get(did);
+        JSONObject respone = new JSONObject();
+        if (mci != null) {
+            //JSONObject jo = new JSONObject();
+            respone.put(JsonField.MSG.ID, did);
+            Msg queryMessage = MessageFactory.getMessage(Msg.TYPE.DINFO, respone);
+            try {
+                if (mci.getIsa() != null) {
+                    Object ack = master.getMasterActor().sendToSlaveWithReply(queryMessage, mci.getIsa());
+                    respone = ((DinfoMessage)ack).data();
+                    respone.put("machineIp", mci.getIsa().getAddress().getHostAddress());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        respone.put(JsonField.DeviceValue.ID, did);
+        responseJson(cntx, respone);
     }
 
     private static final class CtrlRetTuple {
@@ -195,6 +235,16 @@ public class MasterHTTPHandler extends SimpleChannelInboundHandler<FullHttpReque
         cntx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
+    private void responseJson(ChannelHandlerContext cntx, JSONObject jo) {
+        FullHttpMessage response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/json; charset=UTF-8");
+        StringBuffer buf = new StringBuffer(jo.toString());
+        ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
+        response.content().writeBytes(buffer);
+        buffer.release();
+        cntx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+    }
+
     private String sanitizeURI(String uri) {
         try {
             uri = URLDecoder.decode(uri, "UTF-8");
@@ -206,7 +256,7 @@ public class MasterHTTPHandler extends SimpleChannelInboundHandler<FullHttpReque
             }
         }
 
-        return uri.substring(uri.lastIndexOf("/") + 1, uri.length());
+        return uri.substring(1, uri.length());
     }
 
     @Override

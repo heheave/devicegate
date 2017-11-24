@@ -4,11 +4,14 @@ import devicegate.conf.JsonField;
 import devicegate.conf.V;
 import devicegate.launch.SlaveLaunch;
 import devicegate.manager.DeviceCacheInfo;
+import devicegate.manager.DeviceManager;
 import devicegate.protocol.*;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
@@ -31,8 +34,19 @@ public class SlaveMessageHandler extends ChannelInboundHandlerAdapter implements
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
-        JSONObject jo = (JSONObject)msg;
-        messageInHandler(jo, AttachInfo.constantAttachInfo(ctx.channel()));
+        ByteBuf buf = (ByteBuf)msg;
+        JSONObject jo = null;
+        long bytes = buf.readableBytes();
+        try {
+            jo = JSONObject.fromObject(new String(buf.array()));
+        } catch (JSONException je) {
+            jo = null;
+        }
+        if (jo != null) {
+            DeviceManager dm = pm.slaveLaunch().getDm();
+            dm.msgStatisticUp(System.currentTimeMillis(), 1, bytes);
+            messageInHandler(jo, AttachInfo.constantAttachInfo(ctx.channel()));
+        }
     }
 
     @Override
@@ -80,9 +94,9 @@ public class SlaveMessageHandler extends ChannelInboundHandlerAdapter implements
                     }
                 }
                 if (checked) {
-                    pm.messageOut(pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_MSG_ACK, "CNT SUCCESS")), attachInfo);
+                    pm.messageOut(pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_MSG_ACK)), attachInfo);
                 } else {
-                    pm.messageOut(pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH, "DEVICE NOT AUTH")),
+                    pm.messageOut(pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH)),
                             new ChannelAttachInfo(channel, true, false));
                 }
             } else {
@@ -90,16 +104,17 @@ public class SlaveMessageHandler extends ChannelInboundHandlerAdapter implements
                 AuthRet authRet = pm.authorize(jo, ProtocolManager.AuthType.IN);
                 if (dci != null && authRet.isAuthorized()) {
                     log.info("session found");
-                    dci.updateTime();
+                    //dci.updateTime();
                     try {
+                        dci.msgStaticUp(jo);
                         pm.pushToKafka(dci.decorateJson(jo));
                     } catch (AccessControlException e) {
-                        pm.messageOut(pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH, "DEVICE NOT AUTH")),
+                        pm.messageOut(pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH)),
                                 new ChannelAttachInfo(channel, true, false));
                     }
                 } else {
                     log.info("session not found or error cause by " + authRet.faildReason());
-                    pm.messageOut(pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH, "DEVICE NOT AUTH")),
+                    pm.messageOut(pm.backInfoWrap(slaveLaunch.getConf().getStringOrElse(V.DEVICE_NOT_AUTH)),
                             new ChannelAttachInfo(channel, true, false));
                 }
             }

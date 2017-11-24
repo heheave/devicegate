@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <variable>
-    <v name="sjtumaster.master.host">192.168.1.110</v>
-    <v name="sjtumaster.slave.host">192.168.1.110</v>
+    <v name="sjtumaster.master.host">192.168.31.110</v>
+    <v name="sjtumaster.slave.host">192.168.31.110</v>
     <v name="sjtumaster.kafka.push.topic">devicegate-topic</v>
-    <v name="sjtumater.kafka.broker.list">192.168.1.110:9092</v>
+    <v name="sjtumater.kafka.broker.list">192.168.31.110:9092</v>
 
 
     <v name="sjtumaster.master.schedule.period">30000</v>

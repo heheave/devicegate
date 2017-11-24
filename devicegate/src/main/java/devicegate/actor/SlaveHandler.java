@@ -1,14 +1,11 @@
 package devicegate.actor;
 
-import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
 import devicegate.actor.message.*;
-import devicegate.conf.JsonField;
 import devicegate.launch.SlaveLaunch;
 import devicegate.manager.DeviceCacheInfo;
-import devicegate.security.DeviceCtrlPermission;
+import devicegate.manager.DeviceManager;
 import net.sf.json.JSONObject;
-import org.apache.commons.collections.Factory;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
@@ -39,6 +36,8 @@ public class SlaveHandler extends UntypedActor {
             tellToMaster();
         } else if (message instanceof CtrlMessage){
             ctrl((CtrlMessage)message);
+        } else if (message instanceof DinfoMessage){
+            query((DinfoMessage)message);
         } else {
             log.info("Received Message: " + message);
         }
@@ -55,6 +54,19 @@ public class SlaveHandler extends UntypedActor {
                 }
                 getSender().tell(ackMsg, getSelf());
             }
+        }
+    }
+
+    private void query(DinfoMessage dinfoMessage) {
+        DeviceManager dm = slaveLaunch.getDm();
+        String did = dinfoMessage.getId();
+        if (did != null) {
+            DeviceCacheInfo dci = dm.get(did);
+            if (dci != null) {
+                JSONObject jo = JSONObject.fromObject(dci.packageInfo());
+                dinfoMessage.setData(jo);
+            }
+            getSender().tell(dinfoMessage, getSelf());
         }
     }
 

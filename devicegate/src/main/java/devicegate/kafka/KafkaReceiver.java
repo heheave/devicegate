@@ -43,7 +43,7 @@ public class KafkaReceiver {
         super();
         this.master = master;
         this.conf = master.getConf();
-        this.kafkaCtrlTopic = conf.getStringOrElse(V.KAFKA_CTRL_TOPIC, "device-ctrl-topic");
+        this.kafkaCtrlTopic = conf.getStringOrElse(V.KAFKA_CTRL_TOPIC);
         this.executors = Executors.newSingleThreadExecutor();
     }
 
@@ -98,15 +98,15 @@ public class KafkaReceiver {
     }
 
     private ConsumerConfig createConsumerConfig() {
-        String zookeeper = conf.getStringOrElse(V.KAFKA_ZK_LIST, "192.168.1.110:2181");
-        String broker = conf.getStringOrElse(V.KAFKA_BROKER_LIST, "192.168.1.110:9092");
-        String groupId = conf.getStringOrElse(V.KAFKA_GROUP_ID, "CTRL_CONSUMER_GROUP");
-        String autoOffsetReset = conf.getStringOrElse(V.KAFKA_AUTO_OFFSET_RESET, "largest");
-        String sessionTimeout = conf.getStringOrElse(V.KAFKA_ZK_SESSION_TIMEOUT, "7000");
-        String rbMaxRetries = conf.getStringOrElse(V.KAFKA_REBALANCE_MAX_RETRIES, "4");
-        String rbBackOff = conf.getStringOrElse(V.KAFKA_REBALANCE_BACKOFF, "2000");
-        String syncTime = conf.getStringOrElse(V.KAFKA_ZK_SYNC_TIME, "2000");
-        String autoCommit = conf.getStringOrElse(V.KAFKA_AUTO_COMMIT_INTERVAL, "1000");
+        String zookeeper = conf.getStringOrElse(V.KAFKA_ZK_LIST);
+        String broker = conf.getStringOrElse(V.KAFKA_BROKER_LIST);
+        String groupId = conf.getStringOrElse(V.KAFKA_GROUP_ID);
+        String autoOffsetReset = conf.getStringOrElse(V.KAFKA_AUTO_OFFSET_RESET);
+        String sessionTimeout = conf.getStringOrElse(V.KAFKA_ZK_SESSION_TIMEOUT);
+        String rbMaxRetries = conf.getStringOrElse(V.KAFKA_REBALANCE_MAX_RETRIES);
+        String rbBackOff = conf.getStringOrElse(V.KAFKA_REBALANCE_BACKOFF);
+        String syncTime = conf.getStringOrElse(V.KAFKA_ZK_SYNC_TIME);
+        String autoCommit = conf.getStringOrElse(V.KAFKA_AUTO_COMMIT_INTERVAL);
         Properties props = new Properties();
         props.put("zookeeper.connect", zookeeper);
         props.put("metadata.broker.list", broker);

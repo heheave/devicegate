@@ -1,11 +1,9 @@
 package devicegate.netty.handler;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import net.sf.json.JSON;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
 
 import java.util.List;
 
@@ -36,10 +34,9 @@ public class SlaveInDecoderHandler extends ByteToMessageDecoder {
         byteBuf.readBytes(buf, curidx, needReadBytes);
         curidx += needReadBytes;
         if (curidx == limit) {
-            byte[] values = buf;
+            ByteBuf byteBuf1 = Unpooled.wrappedBuffer(buf);
             buf = null;
-            Object msg = JSONObject.fromObject(new String(values));
-            list.add(msg);
+            list.add(byteBuf1);
         }
     }
 

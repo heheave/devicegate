@@ -36,8 +36,9 @@ public class SlaveActor extends AbstractAkkaActor{
     public SlaveActor(Configure conf, SlaveLaunch slaveLaunch) {
         super(conf);
         this.slaveLaunch = slaveLaunch;
-        String systemHost = conf.getString(V.SLAVE_HOST);
-        this.systemAddress = new InetSocketAddress(systemHost, 10020);
+        String systemHost = conf.getStringOrElse(V.SLAVE_HOST);
+        int port = conf.getIntOrElse(V.ACTOR_SLAVE_PORT);
+        this.systemAddress = new InetSocketAddress(systemHost, port);
     }
 
     public void sendToRemote(Object msg, InetSocketAddress remoteSystemAddr) {
@@ -47,7 +48,7 @@ public class SlaveActor extends AbstractAkkaActor{
     }
 
     public Object sendToMasterWithReply(Msg msg)  throws Exception {
-        long contTimeOut = conf.getLongOrElse(V.ACTOR_REPLY_TIMEOUT, 2000);
+        long contTimeOut = conf.getLongOrElse(V.ACTOR_REPLY_TIMEOUT);
         return sendToMasterWithReply(msg, contTimeOut);
     }
 
@@ -63,11 +64,11 @@ public class SlaveActor extends AbstractAkkaActor{
 
 
     public void start() {
-        String slaveName = conf.getStringOrElse(V.ACTOR_SLAVE_SYSTEM_NAME, "SLAVESYSTEM");
+        String slaveName = conf.getStringOrElse(V.ACTOR_SLAVE_SYSTEM_NAME);
         //Config config = ConfigFactory.load().getConfig("localConf");
         Config config = ConfigFactory.parseFile(new File(V.ACTOR_CONF_PATH)).getConfig("slaveConf");
         system = ActorSystem.apply(slaveName, config);
-        String slavePath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH, "ACTORPATH");
+        String slavePath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH);
         actorRef = system.actorOf(Props.create(SlaveHandler.class, slaveLaunch, systemAddress), slavePath);
     }
 

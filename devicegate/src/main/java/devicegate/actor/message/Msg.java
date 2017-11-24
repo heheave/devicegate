@@ -6,7 +6,6 @@ import net.sf.json.JSONObject;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
-import java.util.Map;
 
 /**
  * Created by xiaoke on 17-5-16.
@@ -14,7 +13,7 @@ import java.util.Map;
 public abstract class Msg implements Serializable{
 
     public enum TYPE {
-        HB, ACK, TELLME, ADDID, RMID, STASLV, STPSLV, CTRL
+        HB, ACK, TELLME, ADDID, RMID, STASLV, STPSLV, CTRL, DINFO
     }
 
     protected final TYPE type;

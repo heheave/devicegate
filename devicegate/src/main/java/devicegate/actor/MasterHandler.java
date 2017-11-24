@@ -2,7 +2,6 @@ package devicegate.actor;
 
 import akka.actor.UntypedActor;
 import devicegate.actor.message.*;
-import devicegate.launch.MasterLaunch;
 import devicegate.manager.MachineManager;
 import org.apache.log4j.Logger;
 
@@ -60,7 +59,7 @@ public class MasterHandler extends UntypedActor {
         if (isa != null) {
             log.info(isa.getAddress().getHostAddress() + ":" + isa.getPort() + " connected to master");
         }
-        MachineManager.getInstance().updateAddress(isa);
+        MachineManager.getInstance().updateAddressOnly(isa);
     }
 
     private void stopSlv(StopSlvMessage stopSlvMessage) {
@@ -93,8 +92,9 @@ public class MasterHandler extends UntypedActor {
 
     private InetSocketAddress hb(HBMessage hbMessage) {
         InetSocketAddress isa = hbMessage.getAddress();
+        HBInfo hb = new HBInfo(hbMessage.data());
         if (isa != null) {
-            if (!MachineManager.getInstance().updateAddress(isa)) {
+            if (!MachineManager.getInstance().updateAddressWithHBInfo(isa, hb)) {
                 return isa;
             }
         }

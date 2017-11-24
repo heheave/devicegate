@@ -27,11 +27,11 @@ abstract public class DeviceInstance<T extends DeviceValue<?>> extends AbstracMo
 
     private volatile boolean isCnt;
 
-    public DeviceInstance(String id, String type, String desc, String company, Location location, long dtimestamp, int portNum) {
-        super(id, type, desc, company, location, dtimestamp, portNum);
+    public DeviceInstance(String app, String id, String type, String desc, String company, Location location, long dtimestamp, int portNum) {
+        super(app, id, type, desc, company, location, dtimestamp, portNum);
         this.s = new Socket();
         try {
-            s.connect(new InetSocketAddress("192.168.1.110", 10000));
+            s.connect(new InetSocketAddress("192.168.31.110", 10000));
             s.setKeepAlive(true);
             //isCnt = cnt();
         } catch (IOException e) {
@@ -112,11 +112,11 @@ abstract public class DeviceInstance<T extends DeviceValue<?>> extends AbstracMo
                         .setValue(i, new BooleanDeviceValue(ran.nextBoolean()));
             } else if (mtype().equals("DIGITL")) {
                 ((DeviceInstance<IntegerDeviceValue>)this)
-                        .setValue(i, new IntegerDeviceValue(ran.nextInt(100), "cnt"));
+                        .setValue(i, new IntegerDeviceValue(ran.nextInt(2), "cnt"));
                 i += 1;
             } else {
                 ((DeviceInstance<DoubleDeviceValue>)this).
-                        setValue(i, new DoubleDeviceValue(ran.nextDouble(), "mv"));
+                        setValue(i, new DoubleDeviceValue(ran.nextDouble() * 3, "mv"));
             }
         }
     }

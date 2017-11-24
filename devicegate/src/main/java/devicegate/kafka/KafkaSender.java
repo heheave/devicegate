@@ -21,8 +21,6 @@ public class KafkaSender {
 
     private static final Logger log = Logger.getLogger(KafkaSender.class);
 
-    private static final String BROKER_LIST = "192.168.1.111:9092,192.168.1.112:9092,192.168.1.113:9092";
-
     private final Configure conf;
 
     private final ExecutorService runner;
@@ -39,7 +37,7 @@ public class KafkaSender {
 
     private final Runnable run = new Runnable() {
         public void run() {
-            final String topic = conf.getStringOrElse(V.KAFKA_PUSH_TOPIC, "devicegate-topic");
+            final String topic = conf.getStringOrElse(V.KAFKA_PUSH_TOPIC);
             final Callback callback = new Callback() {
                 public void onCompletion(RecordMetadata recordMetadata, Exception e) {
                     if (recordMetadata != null) {
@@ -72,10 +70,10 @@ public class KafkaSender {
     public KafkaSender(Configure conf) {
         this.conf = conf;
         this.runner = Executors.newSingleThreadExecutor();
-        this.fullDrop = conf.getBooleanOrElse(V.KAFKA_FULL_DROP, true);
-        int queueCompacity = conf.getIntOrElse(V.KAFKA_QUEUE_COMPACITY, 10000);
+        this.fullDrop = conf.getBooleanOrElse(V.KAFKA_FULL_DROP);
+        int queueCompacity = conf.getIntOrElse(V.KAFKA_QUEUE_COMPACITY);
         this.msgQueue = new ArrayBlockingQueue<Serializable>(queueCompacity);
-        String brokerList = conf.getStringOrElse(V.KAFKA_BROKER_LIST, BROKER_LIST);
+        String brokerList = conf.getStringOrElse(V.KAFKA_BROKER_LIST);
         this.producerPropertis = new Properties();
         this.producerPropertis.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList);
         // this.producerPropertis.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, 0);
@@ -121,7 +119,7 @@ public class KafkaSender {
     public void stop() {
         if (producer != null) {
             long sleepTryTime = 0;
-            final long sleepTime = conf.getLongOrElse(V.KAFKA_CLOSING_WAITTIME, 1000);
+            final long sleepTime = conf.getLongOrElse(V.KAFKA_CLOSING_WAITTIME);
             if (sleepTime > 0) {
                 synchronized (this) {
                     while (!msgQueue.isEmpty() && sleepTryTime < 3) {

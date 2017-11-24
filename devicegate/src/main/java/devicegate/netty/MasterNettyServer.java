@@ -24,7 +24,7 @@ import java.net.InetSocketAddress;
  */
 public class MasterNettyServer {
 
-    private static Logger log = Logger.getLogger(MasterNettyServer.class);
+    private static final Logger log = Logger.getLogger(MasterNettyServer.class);
 
     private final EventLoopGroup bossGroup;
 
@@ -43,17 +43,17 @@ public class MasterNettyServer {
         this.workGroup = new NioEventLoopGroup();
         this.master = master;
         this.conf = master.getConf();
-        String localHost = conf.getString(V.MASTER_HOST);
-        int localPort = conf.getIntOrElse(V.NETTY_MASTER_SERVER_PORT, 9090);
+        String localHost = conf.getStringOrElse(V.MASTER_HOST);
+        int localPort = conf.getIntOrElse(V.NETTY_MASTER_SERVER_PORT);
         this.bindAddress = new InetSocketAddress(localHost, localPort);
         this.isRunning = false;
     }
 
     public void start() {
         isRunning = true;
-        final int HOAMaxCntLength = conf.getIntOrElse(V.MASTER_HOA_MAX_CONTENT_LENGTH, 65536);
+        final int HOAMaxCntLength = conf.getIntOrElse(V.MASTER_HOA_MAX_CONTENT_LENGTH);
         try {
-            int SO_BACKLOG = conf.getIntOrElse(V.NETTY_SERVER_SO_BACKLOG, 100);
+            int SO_BACKLOG = conf.getIntOrElse(V.NETTY_SERVER_SO_BACKLOG);
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(this.bossGroup, this.workGroup)
                     .channel(NioServerSocketChannel.class)

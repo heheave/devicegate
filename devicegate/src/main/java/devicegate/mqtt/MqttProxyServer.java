@@ -9,7 +9,6 @@ import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
 import java.net.InetSocketAddress;
-import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -54,14 +53,14 @@ public class MqttProxyServer extends MessageServer{
         this.defaultOpt = new MqttConnectOptions();
         this.defaultOpt.setAutomaticReconnect(false);
         this.defaultOpt.setCleanSession(false);
-        int mqttConnectTimeout = conf.getIntOrElse(V.MQTT_CONNECT_TIMEOUT, 1000);
-        int mqttKeepaliveInterval = conf.getIntOrElse(V.MQTT_KEEPALIVE_INTERVAL, 2000);
+        int mqttConnectTimeout = conf.getIntOrElse(V.MQTT_CONNECT_TIMEOUT);
+        int mqttKeepaliveInterval = conf.getIntOrElse(V.MQTT_KEEPALIVE_INTERVAL);
         this.defaultOpt.setConnectionTimeout(mqttConnectTimeout);
         this.defaultOpt.setKeepAliveInterval(mqttKeepaliveInterval);
         //this.defaultOpt.setUserName();
         //this.defaultOpt.setPassword();
-        this.pubBuffer = new ArrayBlockingQueue<PubThing>(conf.getIntOrElse(V.MQTT_PUB_QUEUE_SIZE, 1000));
-        this.subTopic = conf.getStringOrElse(V.MQTT_SUB_TOPIC, "PLATFORM_MQTT_ACCESS_TOPIC"/*"SparkStreamingMQTT"*/);
+        this.pubBuffer = new ArrayBlockingQueue<PubThing>(conf.getIntOrElse(V.MQTT_PUB_QUEUE_SIZE));
+        this.subTopic = conf.getStringOrElse(V.MQTT_SUB_TOPIC/*"SparkStreamingMQTT"*/);
         String brokerAddress = "114.55.92.31";
         //String brokerAddress = conf.getStringOrElse(V.SLAVE_HOST, "114.55.92.31");
         this.subAddress = new InetSocketAddress(brokerAddress, 1883);
@@ -73,7 +72,7 @@ public class MqttProxyServer extends MessageServer{
         this.isRunning = true;
         String mqttServerUrl = String.format("tcp://%s:%d", subAddress.getAddress().getHostAddress(), subAddress.getPort());
         log.info("MQTT proxy client is started: " + mqttServerUrl);
-        final String mqttClientId = conf.getStringOrElse(V.MQTT_CLIENT_ID, UUID.randomUUID().toString());
+        final String mqttClientId = conf.getStringOrElse(V.MQTT_CLIENT_ID);
         try {
             client = new MqttClient(mqttServerUrl, mqttClientId, new MemoryPersistence());
         } catch (MqttException e) {
@@ -143,7 +142,7 @@ public class MqttProxyServer extends MessageServer{
             return;
         }
         log.info("Start reconnect and resubscribe runner");
-        final long sleepIfFailed = conf.getLongOrElse(V.MQTT_SLEEP_IF_FAILED, 5000);
+        final long sleepIfFailed = conf.getLongOrElse(V.MQTT_SLEEP_IF_FAILED);
         Runnable run = new Runnable() {
             public void run() {
                 // 0 is not connect
@@ -196,7 +195,7 @@ public class MqttProxyServer extends MessageServer{
         isRunning = false;
         if (client != null) {
             try {
-                client.setTimeToWait(conf.getLongOrElse(V.MQTT_TIME_TO_WAIT, 4000));
+                client.setTimeToWait(conf.getLongOrElse(V.MQTT_TIME_TO_WAIT));
                 if (!isRec) {
                     log.info("MQTT stop first unsubscribe");
                     client.unsubscribe(subTopic);

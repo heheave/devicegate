@@ -10,6 +10,8 @@ import simulation.DeviceValue.DeviceValue;
  */
 abstract public class AbstracMonitorDevice<T extends DeviceValue<?>> implements Device{
 
+    protected final String app;
+
     protected final String id;
 
     protected String dtype;
@@ -26,7 +28,8 @@ abstract public class AbstracMonitorDevice<T extends DeviceValue<?>> implements 
 
     protected DeviceValue<?>[] values;
 
-    public AbstracMonitorDevice(String id, String type, String desc, String company, Location location, long dtimestamp, int portNum) {
+    public AbstracMonitorDevice(String app, String id, String type, String desc, String company, Location location, long dtimestamp, int portNum) {
+        this.app = app;
         this.id = id;
         this.dtype = type;
         this.desc = desc;
@@ -80,7 +83,7 @@ abstract public class AbstracMonitorDevice<T extends DeviceValue<?>> implements 
 
     public JSONObject toJson() {
         JSONObject jo = new JSONObject();
-        jo.put(JsonField.DeviceValue.APP, "app1");
+        jo.put(JsonField.DeviceValue.APP, app);
         jo.put(JsonField.DeviceValue.ID, id);
         jo.put(JsonField.DeviceValue.DTYPE, dtype);
         jo.put(JsonField.DeviceValue.DESC, desc);

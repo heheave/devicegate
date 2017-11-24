@@ -38,6 +38,9 @@ public class MessageFactory {
             case CTRL:
                 ret = jo != null ? new CtrlMessage(jo) : new CtrlMessage();
                 break;
+            case DINFO:
+                ret = jo != null ? new DinfoMessage(jo) : new DinfoMessage();
+                break;
             default:
         }
         return ret;

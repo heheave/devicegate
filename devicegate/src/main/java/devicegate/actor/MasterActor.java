@@ -27,8 +27,9 @@ public class MasterActor extends AbstractAkkaActor {
 
     public MasterActor(Configure conf) {
         super(conf);
-        String systemHost = conf.getString(V.MASTER_HOST);
-        this.systemAddress = new InetSocketAddress(systemHost, 10010);
+        String systemHost = conf.getStringOrElse(V.MASTER_HOST);
+        int port = conf.getIntOrElse(V.ACTOR_MASTER_PORT);
+        this.systemAddress = new InetSocketAddress(systemHost, port);
     }
 
     public void sendToRemote(Object msg, InetSocketAddress hostAddr) {
@@ -38,7 +39,7 @@ public class MasterActor extends AbstractAkkaActor {
     }
 
     public Object sendToSlaveWithReply(Msg msg, InetSocketAddress hostAddr)  throws Exception {
-        long contTimeOut = conf.getLongOrElse(V.ACTOR_REPLY_TIMEOUT, 2000);
+        long contTimeOut = conf.getLongOrElse(V.ACTOR_REPLY_TIMEOUT);
         return sendToSlaveWithReply(msg, hostAddr, contTimeOut);
     }
 
@@ -52,10 +53,10 @@ public class MasterActor extends AbstractAkkaActor {
     }
 
     public void start() {
-        String masterName = conf.getStringOrElse(V.ACTOR_MASTER_SYSTEM_NAME, "MASTERSYSTEM");
+        String masterName = conf.getStringOrElse(V.ACTOR_MASTER_SYSTEM_NAME);
         Config config = ConfigFactory.parseFile(new File(V.ACTOR_CONF_PATH)).getConfig("masterConf");
         system = ActorSystem.apply(masterName, config);
-        String masterPath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH, "ACTORPATH");
+        String masterPath = conf.getStringOrElse(V.ACTOR_INSTANCE_PATH);
         actorRef = system.actorOf(Props.create(MasterHandler.class, this), masterPath);
     }
 
@@ -74,9 +75,9 @@ public class MasterActor extends AbstractAkkaActor {
         return systemAddress;
     }
 
-    public static void main(String[] args) {
-        MasterActor ma = new MasterActor(new Configure());
-        ma.start();
-        ma.sendToRemote("dafasf", new InetSocketAddress("127.0.0.1", 10020));
-    }
+//    public static void main(String[] args) {
+//        MasterActor ma = new MasterActor(new Configure());
+//        ma.start();
+//        ma.sendToRemote("dafasf", new InetSocketAddress("127.0.0.1", 10020));
+//    }
 }

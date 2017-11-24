@@ -13,6 +13,20 @@ public class JsonField {
         public static final String PTC = "ptc";
         public static final String ISRET = "ret";
         public static final String ACKINFO = "ackinfo";
+
+
+
+        public static final String CU = "cpu";
+        public static final String MU = "mem";
+        public static final String IU = "io";
+        public static final String NU = "net";
+        public static final String MN = "msgNum";
+        public static final String MB = "msgBytes";
+        public static final String MNT = "msgNumT";
+        public static final String MBT = "msgBytesT";
+        public static final String DT = "dt";
+        public static final String CN = "cntNum";
+        public static final String HT = "time";
     }
 
     public static final class DeviceValue {
